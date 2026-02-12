@@ -158,8 +158,7 @@ This is currently a church internal project MVP. Suggestions and improvements ar
 
 ## License
 
-Choose a license before publishing publicly (recommended: MIT).
-If you haven’t decided yet, you can add one later.
+Creative Commons CC0-1.0
 
 ---
 
