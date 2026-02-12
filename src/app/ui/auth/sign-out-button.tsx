@@ -2,15 +2,26 @@
 
 import { useRouter } from 'next/navigation';
 import { PowerIcon } from '@heroicons/react/24/outline';
-import { useState } from 'react';
+import * as React from 'react';
 
 type Props = {
   className?: string;
+  label?: string;
+  showIcon?: boolean;
+  onSignedOut?: () => void;
 };
 
-const SignOutButton = ({ className }: Props) => {
+const DEFAULT_CLASS =
+  "flex h-12 w-full grow items-center justify-center gap-2 rounded-md bg-gray-50 p-3 text-sm font-medium hover:bg-sky-100 hover:text-blue-600 disabled:opacity-60 md:flex-none md:p-2 md:px-3";
+
+const SignOutButton = ({ 
+  className,
+  label = 'Sign Out',
+  showIcon = true,
+  onSignedOut,
+}: Props) => {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = React.useState(false);
 
   const onSignOut = async () => {
     if (loading) return;
@@ -32,13 +43,12 @@ const SignOutButton = ({ className }: Props) => {
       type='button'
       onClick={onSignOut}
       disabled={loading}
-      className={
-        className ??
-        'flex h-12 w-full grow items-center justify-center gap-2 rounded-md bg-gray-50 p-3 text-sm font-medium hover:bg-sky-100 hover:text-blue-600 disabled:opacity-60 md:flex-none md:justify-start md:p-2 md:px-3'
-      }
+      className={`${DEFAULT_CLASS} ${className ?? ""}`}
     >
-      <PowerIcon className='w-6' />
-      <div className='hidden md:block'>{loading ? 'Signing out...' : 'Sign Out'}</div>
+      {showIcon && <PowerIcon className="w-6" />}
+      <span className="hidden md:block">
+        {loading ? "Signing out..." : label}
+      </span>
     </button>
   )
 }
