@@ -1,0 +1,132 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model CharityProfile {
+  id                Int @id @default(1)
+  legalName         String @db.VarChar(120)
+  address           String @db.VarChar(120)
+  city              String @db.VarChar(40)
+  province          String @db.VarChar(20)
+  postal            String @db.VarChar(7)
+  registrationNo    String @db.VarChar(20)
+  locationIssued    String @db.VarChar(60)
+  authorizedSigner  String @db.VarChar(80)  // Name/Title shown on receipt
+  updatedAt         DateTime @updatedAt
+}
+
+model Receipt {
+  id              String @id @default(cuid())
+  memberId        Int
+  taxYear         Int
+  issueDate       DateTime  @default(now())
+  serialNumber    Int
+
+  totalCents      Int // Total donated (cash gifts sum)
+  eligibleCents   Int // Eligible amount for tax purposess (can equal totalCents for pure cashs gifts)
+  advantageCents  Int @default(0) // For split receipting later
+
+  donorName       String  @db.VarChar(80)
+  donorAddress    String? @db.VarChar(120)
+  donorCity       String? @db.VarChar(40)
+  donorProvince   String? @db.VarChar(20)
+  donorPostal     String? @db.VarChar(7)
+
+  charityName     String  @db.VarChar(120)
+  charityAddress  String  @db.VarChar(120)
+  charityCity     String  @db.VarChar(40)
+  charityProvince String  @db.VarChar(20)
+  charityPostal   String  @db.VarChar(7)
+  charityRegNo    String  @db.VarChar(20)
+  locationIssued  String  @db.VarChar(60)
+  authorizedSigner String @db.VarChar(80)
+
+  pdfUrl          String?
+
+  Member          Member   @relation(fields: [memberId], references: [mbr_id])
+
+  @@unique([taxYear, serialNumber])
+  @@index([memberId, taxYear])
+}
+
+model Category {
+  ctg_id                             Int      @id @default(autoincrement())
+  isParent                           Boolean?
+  depth                              String?  @db.Char(3)
+  range                              String?  @db.Char(3)
+  name                               String   @db.VarChar(20)
+  detail                             String?  @db.VarChar(255)
+  order                              Int?     @db.SmallInt
+  Income_Income_inc_methodToCategory Income[] @relation("Income_inc_methodToCategory")
+  Income_Income_inc_typeToCategory   Income[] @relation("Income_inc_typeToCategory")
+}
+
+model Income {
+  inc_id                               Int       @id @default(autoincrement())
+  inc_type                             Int?
+  amount                               Int?
+  member                               Int?
+  year                                 Int?      @db.SmallInt
+  month                                Int?      @db.SmallInt
+  day                                  Int?      @db.SmallInt
+  qt                                   Int?      @db.SmallInt
+  notes                                String?   @db.VarChar(255)
+  created_at                           DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                           DateTime? @db.Timestamp(6)
+  inc_method                           Int?
+  Category_Income_inc_methodToCategory Category? @relation("Income_inc_methodToCategory", fields: [inc_method], references: [ctg_id])
+  Category_Income_inc_typeToCategory   Category? @relation("Income_inc_typeToCategory", fields: [inc_type], references: [ctg_id])
+  Member                               Member?   @relation(fields: [member], references: [mbr_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([month])
+  @@index([qt])
+  @@index([year])
+}
+
+model Member {
+  mbr_id      Int       @id @default(autoincrement())
+  name_kFull  String    @unique @db.VarChar(50)
+  name_eFirst String?   @db.VarChar(30)
+  name_eLast  String?   @db.VarChar(30)
+  email       String?   @db.VarChar(80)
+  address     String?   @db.VarChar(50)
+  city        String?   @db.VarChar(20)
+  province    String?   @db.VarChar(20)
+  postal      String?   @db.VarChar(7)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  note        String?   @db.VarChar(255)
+  Income      Income[]
+
+  receipts    Receipt[]
+}
+
+view IncomeList {
+  inc_id     Int?
+  amount     Int?
+  notes      String?   @db.VarChar(255)
+  year       Int?      @db.SmallInt
+  month      Int?      @db.SmallInt
+  day        Int?      @db.SmallInt
+  type       String?   @db.VarChar(20)
+  name       String?   @db.VarChar(50)
+  qt         Int?      @db.SmallInt
+  created_at DateTime? @db.Timestamp(6)
+  method     String?   @db.VarChar(20)
+}
+
+// Added for admin feature
+model Admin {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(120)
+  passwordHash String   @db.VarChar(255)
+  name         String?  @db.VarChar(80)
+  role         String   @default("admin") @db.VarChar(20) // optional
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
