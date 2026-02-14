@@ -1,5 +1,6 @@
 import { lusitana } from '@/app/ui/fonts';
 import LoginForm from '@/app/ui/auth/login-form';
+import LandingPageHeader from '../ui/landing-header';
 
 const LoginPage = async (props: {
   searchParams?: Promise<{ next?: string }>;
@@ -8,8 +9,13 @@ const LoginPage = async (props: {
   const next = sp?.next ?? '/income';
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <LoginForm next={next} />
+    <main className="min-h-screen p-6">
+      <div className='mb-6 '>
+        <LandingPageHeader />
+      </div>
+      <div className='w-full flex justify-center'>
+        <LoginForm next={next} />
+      </div>      
     </main>
   )
 }
