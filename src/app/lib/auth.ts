@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { cookies } from 'next/headers';
 
 const secret = new TextEncoder().encode(process.env.AUTH_SECRET!);
 
@@ -20,4 +21,11 @@ export const signSession = async (payload: SessionPayload) => {
 export const verifySession = async (token: string) => {
   const { payload } = await jwtVerify(token, secret);
   return payload as unknown as SessionPayload;
+}
+
+// Check if the admin is signed in
+
+export const isSignedIn = async () => {
+  const session = (await cookies()).get('session')?.value;
+  return Boolean(session);
 }
