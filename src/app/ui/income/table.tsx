@@ -95,21 +95,21 @@ const IncomeTable = async ({ incomeList, incomeTypes, incomeMethods }: IncomeTab
                 <tbody className='divide-y divide-gray-100 bg-white text-sm'>
                   {incomeList?.map((income) => (
                     <tr key={income.inc_id} className='hover:bg-gray-50/50'>
-                      <td className='max-w-[220px] truncate px-4 py-3 sm:pl-6'>{income.name ?? '-'}</td>
+                      <td className='max-w-55 truncate px-4 py-3 sm:pl-6'>{income.name ?? '-'}</td>
                       <td className='whitespace-nowrap px-3 py-3 text-gray-700'>
                         {formatDate(income.year, income.month, income.day)}
                       </td>
                       <td className='whitespace-nowrap px-3 py-3 text-right font-medium'>
                         {formatCurrency(income.amount ?? 0)}
                       </td>
-                      <td className='max-w-[140px] truncate px-3 py-3 text-gray-700'>
+                      <td className='max-w-35 truncate px-3 py-3 text-gray-700'>
                         {income.type ?? '-'}
                       </td>
-                      <td className='max-w-[140px] truncate px-3 py-3 text-gray-700'>
+                      <td className='max-w-35 truncate px-3 py-3 text-gray-700'>
                         {income.method ?? '-'}
                       </td>
-                      <td className='min-w-[280px] px-3 py-3 text-gray-700'>
-                        <div className='max-w-[520px] truncate'>
+                      <td className='min-w-70 px-3 py-3 text-gray-700'>
+                        <div className='max-w-130 truncate'>
                           {income.notes?.trim() ? income.notes : '-'}
                         </div>
                       </td>
@@ -127,7 +127,7 @@ const IncomeTable = async ({ incomeList, incomeTypes, incomeMethods }: IncomeTab
 
                   {incomeList?.length === 0 && (
                     <tr>
-                      <td colSpan={7} className='p-4 text-sm text-gray-600'>
+                      <td colSpan={7} className='p-4 text-sm text-gray-600 rounded-b-lg'>
                         No income records found.
                       </td>
                     </tr>
@@ -136,10 +136,6 @@ const IncomeTable = async ({ incomeList, incomeTypes, incomeMethods }: IncomeTab
               </table>
             </div>
           </div>
-
-
-
-
           
         </div>
       </div>

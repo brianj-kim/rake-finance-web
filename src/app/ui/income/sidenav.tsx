@@ -12,11 +12,11 @@ const SideNav = () => {
                    focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
       >
         <div className="rounded-md bg-blue-600 px-4 py-3 border-b border-gray-200">
-          <div className="text-base font-semibold text-white truncate">
+          <div className="text-lg font-semibold text-white truncate">
             RKAC Finance
           </div>
-          <div className="text-white text-sm truncate">
-            / Income Module
+          <div className="text-white text-base truncate">
+            / Income
           </div>
         </div>
       </Link>
