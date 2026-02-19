@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { formatCurrency } from '@/app/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
-import { View } from 'lucide-react';
 
 type Row = { id: number; name: string; totalCents: number };
 

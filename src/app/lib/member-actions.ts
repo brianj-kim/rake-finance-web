@@ -9,9 +9,9 @@ import { EditMemberDTO } from './definitions';
 
 const MEMBER_LIST_PATH = '/income/member';
 
-type ActionOK<T extends object = {}> = { success: true } & T;
+type ActionOK<T extends object = object> = { success: true } & T;
 type ActionFail = { success: false; message: string; fieldErrors?: Record<string, string> };
-type ActionResult<T extends object = {}> = ActionOK<T> | ActionFail;
+type ActionResult<T extends object = object> = ActionOK<T> | ActionFail;
 
 const isP2002 = (e: unknown) => 
   e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';

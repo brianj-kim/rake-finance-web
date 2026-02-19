@@ -179,6 +179,6 @@ export type ReceiptListResult = {
   pagination: { totalPages: number; totalItems: number };
 }
 
-export type ActionOK<T extends object = {}> = { success: true } & T;
+export type ActionOK<T extends object = object> = { success: true } & T;
 export type ActionFail = { success: false; message: string };
-export type ActionResult<T extends object = {}> = ActionOK<T> | ActionFail;
+export type ActionResult<T extends object = object> = ActionOK<T> | ActionFail;

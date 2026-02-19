@@ -227,8 +227,8 @@ const BatchIncomeForm = ({ incomeTypes, incomeMethods, defaultRowCount = 20 }: P
     // Reset rows only (keep same data)
     replace(makeDefaultEntries(defaultRowCount));
 
-    const createdMembers = (result as any).createdMembers ?? 0;
-    const incomeCount = (result as any).incomeCount ?? 0;
+    const createdMembers = result.createdMembers;
+    const incomeCount = result.incomeCount;
 
     const msg = 
       createdMembers > 0

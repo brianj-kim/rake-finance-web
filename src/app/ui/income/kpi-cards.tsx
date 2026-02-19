@@ -12,7 +12,7 @@ const StatCard = ({ title, value, sub }: { title: string; value: string; sub?: s
   <div className='rounded-md border border-gray-200 bg-white p-4 shadow-sm'>
     <div className='text-sm text-muted-foreground'>{title}</div>
     <div className='mt-2 text-2xl font-semibold'>{value}</div>
-    {sub ? <div className='mt-1 text-sx text-muted-foreground'>{sub}</div> : null}
+    {sub ? <div className='mt-1 text-xs text-muted-foreground'>{sub}</div> : null}
   </div>
 );
 
@@ -23,7 +23,8 @@ const KpiCards = (props: Props) => {
     <>
       <StatCard title={`Total income (${year})`} value={formatCurrency(yearTotalCents)} />
       <StatCard title='This Month' value={formatCurrency(monthTotalCents)} sub='Current month total' />
-      <StatCard title='uniqueDonors' value={String(uniqueDonors)} sub='Distinct members with donations' />
+      <StatCard title='Donations' value={String(donationCount)} sub='Total donation records in selected year' />
+      <StatCard title='Unique Donors' value={String(uniqueDonors)} sub='Distinct members with donations' />
     </>
   )
 }

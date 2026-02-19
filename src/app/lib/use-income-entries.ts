@@ -16,22 +16,25 @@ const normalizeName = (raw: string) => {
   return raw.trim().replace(/\s/g, "");
 }
 
+const getStoredEntries = (storageKey: string): IncomeEntryDTO[] => {
+  return safeJsonParse<IncomeEntryDTO[]>(
+    typeof window !== "undefined" ? localStorage.getItem(storageKey) : null,
+    []
+  );
+};
+
+const getInitialDate = (stored: IncomeEntryDTO[]): Date | undefined => {
+  if (stored.length === 0) return undefined;
+
+  const first = stored[0];
+  if (!first.year || !first.month || !first.day) return undefined;
+
+  return new Date(`${first.year}-${first.month}-${first.day}T00:00:00`);
+};
+
 export const useIncomeEntries = (storageKey = "incomeEntries") => {
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [entries, setEntries] = useState<IncomeEntryDTO[]>([]);
-
-  useEffect(() => {
-    const stored = safeJsonParse<IncomeEntryDTO[]>(
-      typeof window !== "undefined" ? localStorage.getItem(storageKey) : null,
-      []
-    );
-
-    setEntries(stored);
-
-    if (stored.length > 0 && stored[0].year && stored[0].month && stored[0].day) {
-      setDate(new Date(`${stored[0].year}-${stored[0].month}-${stored[0].day}T00:00:00`))
-    }
-  }, [storageKey]);
+  const [entries, setEntries] = useState<IncomeEntryDTO[]>(() => getStoredEntries(storageKey));
+  const [date, setDate] = useState<Date | undefined>(() => getInitialDate(getStoredEntries(storageKey)));
 
   useEffect(() => {
     if (typeof window !== "undefined") {
