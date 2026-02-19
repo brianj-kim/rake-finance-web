@@ -60,8 +60,8 @@ const LoginForm = ({ next }: Props) => {
 
       router.replace(redirectTo);
       router.refresh();
-    } catch (err) {
-      setError('Network error. Pleases try again.');
+    } catch {
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }

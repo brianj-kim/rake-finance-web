@@ -33,6 +33,7 @@ const SignOutButton = ({
         headers: { 'content-type': 'application/json' },
       });
     } finally {
+      onSignedOut?.();
       setLoading(false);
       router.replace('/login?next=%2F');
     }

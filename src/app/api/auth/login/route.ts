@@ -7,7 +7,7 @@ export const POST = async (req: Request) => {
   const { email, password } = await req.json().catch(() => ({}));
 
   if (!email || !password) {
-    return NextResponse.json({ error: 'Missiong credentials'}, { status: 400 });
+    return NextResponse.json({ error: 'Missing credentials' }, { status: 400 });
   }
 
   const admin = await prisma.admin.findUnique({

@@ -1,4 +1,6 @@
-import { Inter, Lusitana } from 'next/font/google';
+type FontClass = {
+  className: string;
+};
 
-export const inter = Inter({ subsets: ['latin'] });
-export const lusitana = Lusitana({ subsets: ['latin'], weight: ['400', '700']});
+export const inter: FontClass = { className: 'font-sans' };
+export const lusitana: FontClass = { className: 'font-serif' };

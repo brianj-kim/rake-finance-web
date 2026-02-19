@@ -17,7 +17,7 @@ export const proxy = async (req: NextRequest) => {
   if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('next', pathname + (searchParams.toString() ? `${searchParams}` : ''));
+    url.searchParams.set('next', pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''));
 
     return NextResponse.redirect(url);
   }
@@ -36,7 +36,7 @@ export const proxy = async (req: NextRequest) => {
 }
 
 export const config = {
-  mathcer: [
+  matcher: [
     /*
       Everything except:
       - next static
