@@ -6,7 +6,8 @@ import SearchBox from '@/app/ui/income/search-box';
 import { formatEnglishName } from '@/app/lib/utils';
 import MemberCardActions from '@/app/ui/income/member-card-actions';
 import Pagination from '@/app/ui/income/pagination';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+type MemberRow = Awaited<ReturnType<typeof fetchFilteredMembers>>['data'][number];
 
 const formatValue = (v: string | null) => (v?.trim() ? v.trim() : '-');
 
@@ -62,7 +63,7 @@ const MemberList = async (props: {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {members.map((m: any) => (
+        {members.map((m: MemberRow) => (
 
         <div
           key={m.mbr_id}              

@@ -12,29 +12,12 @@ import { prisma } from './prisma';
 const ITEMS_PER_PAGE = 30 as const;
 const INCOME_LIST_PATH = '/income/list';
 
-type ActionOK<T extends object = {}> = { success: true } & T;
+type ActionOK<T extends object = object> = { success: true } & T;
 type ActionFail = { success: false, message: string };
-type ActionResult<T extends object = {}> = ActionOK<T> | ActionFail;
+type ActionResult<T extends object = object> = ActionOK<T> | ActionFail;
 
 const isP2002 = (e: unknown) => 
     e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
-
-const tryParseYYYYMMDDRange = (value: string): { start: Date, end: Date } | null => {
-    const m = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return null;
-
-    const year = Number(m[1]);
-    const month = Number(m[2]);
-    const day = Number(m[3]);
-
-    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
-
-    const start = new Date(year, month - 1, day, 0, 0, 0, 0);
-    const end = new Date(year, month - 1, day + 1, 0, 0, 0, 0);
-
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-    return { start, end }
-}
 
 
 const buildIncomeListWhere = (args: {
@@ -455,15 +438,16 @@ export const getTypeBreakdown = async (year: number): Promise<CategoryBreakDownR
     const sumMap = new Map(rows.map(r => [r.inc_type!, r._sum.amount ?? 0]));
     const orderMap = new Map(cats.map(c => [c.ctg_id, c.order ?? 999]));
 
-    return cats
-            .map(c => ({
-                id: c.ctg_id,
-                name: c.name,
-                totalCents: sumMap.get(c.ctg_id) ?? 0,
-                order: orderMap.get(c.ctg_id) ?? 999,
-            }))
-                .sort((a, b) => (a.order - b.order))
-                .map(({ order, ...rest }) => rest);
+    const rowsWithOrder = cats
+        .map((c) => ({
+            id: c.ctg_id,
+            name: c.name,
+            totalCents: sumMap.get(c.ctg_id) ?? 0,
+            sortOrder: orderMap.get(c.ctg_id) ?? 999,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    return rowsWithOrder.map(({ id, name, totalCents }) => ({ id, name, totalCents }));
 };
 
 
@@ -485,13 +469,14 @@ export const getMethodBreakdown = async (year: number): Promise<CategoryBreakDow
     const sumMap = new Map(rows.map(r => [r.inc_method!, r._sum.amount ?? 0]));
     const orderMap = new Map(cats.map(c => [c.ctg_id, c.order ?? 999]));
 
-    return cats
-            .map(c => ({
-                id: c.ctg_id,
-                name: c.name,
-                totalCents: sumMap.get(c.ctg_id) ?? 0,
-                order: orderMap.get(c.ctg_id) ?? 999,
-            }))
-            .sort((a, b) => (a.order - b.order))
-            .map(({ order, ...rest }) => rest);
+    const rowsWithOrder = cats
+        .map((c) => ({
+            id: c.ctg_id,
+            name: c.name,
+            totalCents: sumMap.get(c.ctg_id) ?? 0,
+            sortOrder: orderMap.get(c.ctg_id) ?? 999,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    return rowsWithOrder.map(({ id, name, totalCents }) => ({ id, name, totalCents }));
 };

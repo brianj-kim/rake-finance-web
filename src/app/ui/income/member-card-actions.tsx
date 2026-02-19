@@ -1,8 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import EditMemberDialog from '@/app/ui/income/edit-member-dialog';
 
@@ -12,7 +10,6 @@ type Props = {
 
 const MemberCardActions = ({ memberId }: Props) => {
   const [openEdit, setOpenEdit] = React.useState(false);
-  const router = useRouter();
   // const [deleting, setDeleting] = React.useState(false);
 
   // const onDelete = async () => {

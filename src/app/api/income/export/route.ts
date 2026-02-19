@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from '@/app/lib/prisma';
 
 const toInt = (v: string | null) => {
@@ -20,7 +21,7 @@ export const GET = async (req: NextRequest) => {
     return new Response('Missing year', { status: 400 });
   }
 
-  const AND: any[] = [{ year }];
+  const AND: Prisma.IncomeListWhereInput[] = [{ year }];
   if (month > 0) AND.push({ month });
   if (day > 0) AND.push({ day });
   if (q) AND.push({ name: { contains: q, mode: 'insensitive'} });

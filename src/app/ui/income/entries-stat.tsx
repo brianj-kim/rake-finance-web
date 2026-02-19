@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Badge } from '@/components/ui/badge';
 
 type Props = {
   control: Control<BatchFormValues>;
@@ -24,7 +23,8 @@ type Props = {
 // Showing Statiscis - grand total, group by type, and group by method
 const BatchTotalSummary = ({ control, incomeTypes, incomeMethods, selectedDate, onDateChange }: Props) => {
   const [open, setOpen] = useState<boolean>(false);
-  const entries = useWatch({ control, name: "entries" }) ?? [];
+  const watchedEntries = useWatch({ control, name: "entries" });
+  const entries = useMemo(() => watchedEntries ?? [], [watchedEntries]);
 
   const typeMap = useMemo(() => new Map(incomeTypes.map(t => [t.id, t])), [incomeTypes]);
   const methodMap = useMemo(() => new Map(incomeMethods.map(m => [m.id, m])), [incomeMethods]);
@@ -138,7 +138,7 @@ const BatchTotalSummary = ({ control, incomeTypes, incomeMethods, selectedDate, 
             <div className='text-sm text-gray-500'>No entries</div>
           ) : (
             byMethod.slice(0, 5).map((r) => (
-              <div key={r.id} className='flex items-center juistify-between gap-2 text-sm'>
+              <div key={r.id} className='flex items-center justify-between gap-2 text-sm'>
                 <span className='truncate text-gray-700'>{r.name}</span>
                 <span className='tabular-nums text-gray-900'>{formatCurrency(r.cents)}</span>
               </div>
