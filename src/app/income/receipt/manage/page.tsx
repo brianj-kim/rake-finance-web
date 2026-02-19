@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { lusitana } from '@/app/ui/fonts';
-import { toInt, formatCurrency } from '@/app/lib/utils';
+import { toInt } from '@/app/lib/utils';
 
 import YearSelect from '@/app/ui/income/year-select';
 import SearchBox from '@/app/ui/income/search-box';

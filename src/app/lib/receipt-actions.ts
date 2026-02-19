@@ -10,13 +10,17 @@ import { createElement } from 'react';
 
 import ReceiptDocument, { ReceiptDocumentProps } from '@/app/ui/receipt/receipt-document';
 import { formatEnglishName, truncate } from '@/app/lib/utils';
-import { bufferFromReactPdf } from '@/app/lib/receipt-buffer-from-reactPDF';
+import { bufferFromReactPdf } from '@/app/lib/pdf/buffer-from-react-pdf';
 import type { ActionFail, ActionOK, ActionResult } from '@/app/lib/definitions';
 
 const toISODate = (d: Date) => d.toISOString().slice(0, 10);
 
 const isUniqueViolation = (err: unknown) => 
   err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
+
+const isErrnoException = (err: unknown): err is NodeJS.ErrnoException => {
+  return err instanceof Error && 'code' in err;
+};
 
 export const generateReceiptForSelected = async (input: {
   memberId: number;
@@ -226,8 +230,8 @@ export const deleteReceiptAndFile = async (input: {
     if (filePath) {
       try {
         await fs.unlink(filePath);
-      } catch (err: any) {
-        if (err?.code !== 'ENOENT') {
+      } catch (err: unknown) {
+        if (!isErrnoException(err) || err.code !== 'ENOENT') {
           console.error('unlink failed:', err);
           return { success: false, message: 'Failed to delete PDF file.' };
         }
@@ -247,9 +251,11 @@ export const deleteReceiptAndFile = async (input: {
 }
 
 // Receipt Bulk Actions
-type ReceiptBulkGenOK<T extends object = {}> = { success: true } & T;
+type ReceiptBulkGenOK<T extends object = object> = { success: true } & T;
 type ReceiptBulkGenFail = { success: false; message: string };
-export type ReceiptBulkGenerationResult<T extends object = {}> = ReceiptBulkGenOK | ReceiptBulkGenFail;
+export type ReceiptBulkGenerationResult<T extends object = object> =
+  | ReceiptBulkGenOK<T>
+  | ReceiptBulkGenFail;
 
 const isInt = (v: unknown): v is number => Number.isInteger(v);
 const buildLines = (taxYear: number, donations: Array<{ month: number | null; day: number | null; amount: number | null }>) => {
@@ -551,8 +557,8 @@ export const deleteReceiptsAndFiles = async (input: {
 
       try {
         await fs.unlink(filePath);
-      } catch (err: any) {
-        if (err?.code !== 'ENOENT') {
+      } catch (err: unknown) {
+        if (!isErrnoException(err) || err.code !== 'ENOENT') {
           console.error('unlink failed:', err);
           return { success: false, message: 'Failed to delete one or more PDF files.' };
         }
@@ -571,4 +577,3 @@ export const deleteReceiptsAndFiles = async (input: {
     return { success: false, message: 'Failed to bulk delete receipts.' };
   }
 };
-

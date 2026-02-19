@@ -8,6 +8,8 @@ import type { DonationRow, PagedResult, ReceiptMemberInfo, ReceiptMemberSummary 
 
 import { RECEIPT_EXCLUDE_NAMES } from '@/app/lib/receipt-constants';
 
+const RECEIPT_EXCLUDE_SET = new Set<string>(RECEIPT_EXCLUDE_NAMES);
+
 const baseWhere: Prisma.MemberWhereInput = {
   name_kFull: { notIn: [...RECEIPT_EXCLUDE_NAMES] },
 };
@@ -147,7 +149,7 @@ export async function getReceiptMemberInfo(input: { memberId: number }): Promise
   });
 
   if (!m) return null;
-  if (RECEIPT_EXCLUDE_NAMES.includes(m.name_kFull as any)) return null;
+  if (RECEIPT_EXCLUDE_SET.has(m.name_kFull)) return null;
 
 
   const nameOfficial =
@@ -177,7 +179,7 @@ export async function getMemberDonationsForYear(input: {
             });
 
   if (!m) return [];
-  if (RECEIPT_EXCLUDE_NAMES.includes(m.name_kFull as any)) return [];
+  if (RECEIPT_EXCLUDE_SET.has(m.name_kFull)) return [];
 
   const rows = await prisma.income.findMany({
     where: { member: memberId, year: taxYear, amount: { gt: 0 } },
