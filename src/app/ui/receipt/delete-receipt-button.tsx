@@ -51,7 +51,7 @@ const DeleteReceiptButton = (props: { receiptId: string}) => {
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this receipt?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will delete the database record and the PDF file. This action can't be undeon.
+            This will delete the database record and the PDF file. This action can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

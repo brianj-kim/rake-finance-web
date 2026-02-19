@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 
 import { prisma } from '@/app/lib/prisma';
 import { formatEnglishName, truncate } from '@/app/lib/utils';
-import { bufferFromReactPdf } from '@/app/lib/buffer-from-reactPDF';
+import { bufferFromReactPdf } from '@/app/lib/pdf/buffer-from-react-pdf';
 import ReceiptDocument from './receipt-document';
 
 type ActionOK = {

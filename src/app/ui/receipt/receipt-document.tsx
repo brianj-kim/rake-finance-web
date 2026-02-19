@@ -44,7 +44,7 @@ type Props = {
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 11 },
-  title: { fontSize: 16, marginBottom: 10, fontWeight: 700 as any },
+  title: { fontSize: 16, marginBottom: 10, fontWeight: 700 },
   subtitle: { marginBottom: 10 },
   section: { marginTop: 12 },
   row: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   tableHeader: { flexDirection: "row", borderBottomWidth: 1, borderColor: "#999", paddingBottom: 4, marginTop: 6 },
   tableRow: { flexDirection: "row", paddingVertical: 3, borderBottomWidth: 0.5, borderColor: "#ddd" },
   colDate: { width: "40%" },
-  colAmt: { width: "60%", textAlign: "right" as any },
+  colAmt: { width: "60%", textAlign: "right" },
   small: { fontSize: 9, color: "#666" },
 });
 

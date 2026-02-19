@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { formatCurrency } from '@/app/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -60,15 +59,15 @@ const ManageReceiptTable = (props: { rows: Row[] }) => {
           <Checkbox 
             checked={allSelected ? true : someSelected ? 'indeterminate' : false}
             onCheckedChange={toggleAll}
-            className='data-[static=checked]:bg-blue-600 data-[state=checked]:border-blue-600'          
+            className='data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600'
           />
         </div>
         <div className='col-span-2'>Issued</div>
         <div className='col-span-2'>Serial</div>
         <div className='col-span-3'>Donor</div>
         <div className='col-span-2 text-right'>Amount</div>
-        <div className='col-span-1 text-rign'>PDF</div>
-        <div className='col-spam-1 text-right'>Del</div> 
+        <div className='col-span-1 text-right'>PDF</div>
+        <div className='col-span-1 text-right'>Del</div>
       </div>
 
       {rows.map((r) => {
