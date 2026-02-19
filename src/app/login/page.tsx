@@ -1,4 +1,3 @@
-import { lusitana } from '@/app/ui/fonts';
 import LoginForm from '@/app/ui/auth/login-form';
 import LandingPageHeader from '../ui/landing-header';
 
