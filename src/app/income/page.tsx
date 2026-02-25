@@ -39,7 +39,7 @@ const IncomeDash = async ({ searchParams }: { searchParams: Promise<{ year?: str
         <YearSelect selectedYear={selectedYear} years={years} />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <KpiCards
           year={selectedYear}
           yearTotalCents={kpi.yearTotalCents}

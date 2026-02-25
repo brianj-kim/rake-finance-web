@@ -43,3 +43,6 @@ next-env.d.ts
 # data files
 /app/generated/prisma
 /public/receipts
+
+
+/prisma/seed.ts
