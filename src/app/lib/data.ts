@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { normalizeName } from '@/lib/utils';
 import { prisma } from './prisma';
 
+import { canAccess } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 const ITEMS_PER_PAGE = 30 as const;
 const INCOME_LIST_PATH = '/income/list';
@@ -17,7 +19,7 @@ type ActionFail = { success: false, message: string };
 type ActionResult<T extends object = object> = ActionOK<T> | ActionFail;
 
 const isP2002 = (e: unknown) => 
-    e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+  e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
 
 
 const buildIncomeListWhere = (args: {
@@ -26,54 +28,60 @@ const buildIncomeListWhere = (args: {
     selectedDay?: number;
     query?: string;
 }): Prisma.IncomeListWhereInput => {
-    const { selectedYear, selectedMonth, selectedDay, query } = args;
+	const { selectedYear, selectedMonth, selectedDay, query } = args;
 
-    const AND: Prisma.IncomeListWhereInput[] = [{ year: selectedYear }];
+	const AND: Prisma.IncomeListWhereInput[] = [{ year: selectedYear }];
 
-    if (selectedMonth && selectedMonth > 0) AND.push({ month: selectedMonth });
-    if (selectedDay && selectedDay > 0) AND.push({ day: selectedDay });
+	if (selectedMonth && selectedMonth > 0) AND.push({ month: selectedMonth });
+	if (selectedDay && selectedDay > 0) AND.push({ day: selectedDay });
 
-    const q = query?.trim();
-    if (q) {
-        AND.push({ name: { contains: q, mode: 'insensitive'} });
-    }
+	const q = query?.trim();
+	if (q) {
+			AND.push({ name: { contains: q, mode: 'insensitive'} });
+	}
 
-    return { AND };
+	return { AND };
 };
 
 export const fetchCardData = async (year: number): Promise<IncomeSummary> => {
-    // Categories (range='inc')
-    const categories = await getIncomeTypes();
-    const categoryIds = categories.map((c) => c.id);
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+		throw new Error('Forbidden');
+	}
+	// Categories (range='inc')
+	const categories = await getIncomeTypes();
+	const categoryIds = categories.map((c) => c.id);
 
-    const grouped = await prisma.income.groupBy({
-        by: ['inc_type'],
-        _sum: { amount: true },
-        where: {
-            year,
-            inc_type: { in: categoryIds }
-        }
-    });
+	const grouped = await prisma.income.groupBy({
+			by: ['inc_type'],
+			_sum: { amount: true },
+			where: {
+					year,
+					inc_type: { in: categoryIds }
+			}
+	});
 
-    const sumMap = new Map(grouped.map((g) => [g.inc_type, g._sum.amount ?? 0]));
+	const sumMap = new Map(grouped.map((g) => [g.inc_type, g._sum.amount ?? 0]));
 
-    const byCategory = categories.map((c) => ({
-        categoryId: c.id,
-        categoryName: c.name,
-        order: c.order ?? null,
-        sum: sumMap.get(c.id) ?? 0,
-    }));
+	const byCategory = categories.map((c) => ({
+			categoryId: c.id,
+			categoryName: c.name,
+			order: c.order ?? null,
+			sum: sumMap.get(c.id) ?? 0,
+	}));
 
-    const total = byCategory.reduce((acc, r) => acc + r.sum, 0);
-    return { total, byCategory };
+	const total = byCategory.reduce((acc, r) => acc + r.sum, 0);
+	return { total, byCategory };
 };
 
 export const fetchLatestIncome = async (year: number) => {
-    return prisma.incomeList.findMany({
-        where: { year },
-        orderBy: [{ month: 'desc'}, { day: 'desc' }, { created_at: 'desc' }],
-        take: 5
-    });
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+			throw new Error('Forbidden');
+	}
+	return prisma.incomeList.findMany({
+			where: { year },
+			orderBy: [{ month: 'desc'}, { day: 'desc' }, { created_at: 'desc' }],
+			take: 5
+	});
 };
 
 export const fetchFilteredIncome = async (
@@ -83,61 +91,72 @@ export const fetchFilteredIncome = async (
     selectedMonth?: number,
     selectedDay?: number
 ) => {
-    const page = Number.isFinite(currentPage) && currentPage > 0 ? currentPage : 1;
-    const offset = (page -1) * ITEMS_PER_PAGE;
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
 
-    const where = buildIncomeListWhere({
-        selectedYear,
-        selectedMonth,
-        selectedDay,
-        query
-    });
+	const page = Number.isFinite(currentPage) && currentPage > 0 ? currentPage : 1;
+	const offset = (page -1) * ITEMS_PER_PAGE;
 
-    const [rows, totalCount] = await Promise.all([
-        prisma.incomeList.findMany({
-            where,
-            orderBy: [{ year: 'desc' }, { month: 'desc' }, {day: 'desc' }],
-            take: ITEMS_PER_PAGE,
-            skip: offset
-        }),
-        prisma.incomeList.count({ where })
-    ]);
+	const where = buildIncomeListWhere({
+			selectedYear,
+			selectedMonth,
+			selectedDay,
+			query
+	});
 
-    return {
-        data: rows,
-        pagination: {
-            currentPage: page,
-            pageSize: ITEMS_PER_PAGE,
-            totalItems: totalCount,
-            totalPages: Math.ceil(totalCount / ITEMS_PER_PAGE)
-        }
-    };
+	const [rows, totalCount] = await Promise.all([
+			prisma.incomeList.findMany({
+					where,
+					orderBy: [{ year: 'desc' }, { month: 'desc' }, {day: 'desc' }],
+					take: ITEMS_PER_PAGE,
+					skip: offset
+			}),
+			prisma.incomeList.count({ where })
+	]);
+
+	return {
+		data: rows,
+		pagination: {
+				currentPage: page,
+				pageSize: ITEMS_PER_PAGE,
+				totalItems: totalCount,
+				totalPages: Math.ceil(totalCount / ITEMS_PER_PAGE)
+		}
+	};
 };
 
 export const getMonthDayOptions = async (year: number) => {
-    const rows = await prisma.incomeList.findMany({
-        where: { year },
-        select: { month: true, day: true },
-        distinct: ['month', 'day'],
-        orderBy: [{ month: 'asc' }, { day: 'asc' }]
-    });
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
+	const rows = await prisma.incomeList.findMany({
+			where: { year },
+			select: { month: true, day: true },
+			distinct: ['month', 'day'],
+			orderBy: [{ month: 'asc' }, { day: 'asc' }]
+	});
 
-    return rows
-        .filter((r) => r.month != null && r.day != null)
-        .map((r) => ({ month: r.month as number, day: r.day as number }));
+	return rows
+			.filter((r) => r.month != null && r.day != null)
+			.map((r) => ({ month: r.month as number, day: r.day as number }));
 };
 
 export const getDays = async (year: number, month: number) => {
-    const rows = await prisma.incomeList.findMany({
-        where: { year, month },
-        select: { day: true },
-        distinct: ['day'],
-        orderBy: [{ day: 'asc' }]
-    });
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
 
-    return rows
-        .filter((r) => r.day != null)
-        .map((r) => ({ day: r.day as number }));
+	const rows = await prisma.incomeList.findMany({
+			where: { year, month },
+			select: { day: true },
+			distinct: ['day'],
+			orderBy: [{ day: 'asc' }]
+	});
+
+	return rows
+			.filter((r) => r.day != null)
+			.map((r) => ({ day: r.day as number }));
 };
 
 const getCategoriesByRange = async (range: 'inc' | 'imd'): Promise<CategoryDTO[]> => {
@@ -156,10 +175,26 @@ const getCategoriesByRange = async (range: 'inc' | 'imd'): Promise<CategoryDTO[]
     }));
 };
 
-export const getIncomeTypes = async (): Promise<CategoryDTO[]> => getCategoriesByRange('inc');
-export const getIncomeMethods = async (): Promise<CategoryDTO[]> => getCategoriesByRange('imd');
+export const getIncomeTypes = async (): Promise<CategoryDTO[]> => {
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
+
+	return getCategoriesByRange('inc');
+}
+export const getIncomeMethods = async (): Promise<CategoryDTO[]> => {
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
+
+	return getCategoriesByRange('imd');
+}
 
 export const saveBatchIncome = async (data: BatchIncomeDTO): Promise<ActionResult<{ count: number }>> => {
+    if (!(await canAccess(PERMISSIONS.INCOME_CREATE))) {
+        return { success: false, message: 'Forbidden' }
+    }
+
     try {
         const { year, month, day, entries } = data;
 
@@ -215,6 +250,10 @@ const UpdateIncomeSchema = z.object({
 });
 
 export const updateIncome = async (input: unknown): Promise<ActionResult<{ memberId: number }>> => {
+    if (!(await canAccess(PERMISSIONS.INCOME_UPDATE))) {
+        return { success: false, message: 'Forbidden' };
+    }
+
     const parsed = UpdateIncomeSchema.safeParse(input);
     if (!parsed.success) {
         return { success: false, message: 'Invalid form values.' };
@@ -283,6 +322,10 @@ export const updateIncome = async (input: unknown): Promise<ActionResult<{ membe
 
 // Income Deletion - server action
 export const deleteIncome = async (incId: number): Promise<ActionResult> => {
+    if (!(await canAccess(PERMISSIONS.INCOME_DELETE))) {
+        return { success: false, message: 'Forbidden' };
+    }
+
     try {
         await prisma.income.delete({ where: { inc_id: incId } });
         revalidatePath(INCOME_LIST_PATH);
@@ -297,90 +340,98 @@ export const deleteIncome = async (incId: number): Promise<ActionResult> => {
 const MEMBERS_PER_PAGE = 24 as const;
 
 export const fetchFilteredMembers = async (query: string, currentPage: number) => {
-    const page = Number.isFinite(currentPage) && currentPage > 0 ? currentPage : 1;
-    const offset = (page - 1) * MEMBERS_PER_PAGE;
+	if (!(await canAccess(PERMISSIONS.MEMBER_READ))) {
+    throw new Error('Forbidden');
+	}
 
-    const q = query.trim();
+	const page = Number.isFinite(currentPage) && currentPage > 0 ? currentPage : 1;
+	const offset = (page - 1) * MEMBERS_PER_PAGE;
 
-    const where: Prisma.MemberWhereInput =
-        q.length > 0
-            ? {
-                OR: [
-                    { name_kFull: { contains: q, mode: 'insensitive' } },
-                    { email: { contains: q, mode: 'insensitive' } },
-                    { address: { contains: q, mode: 'insensitive' } }
-                ]
-            }
-            : {};
-    
-    const [rows, totalCount] = await Promise.all([
-        prisma.member.findMany({
-            where,
-            orderBy: { created_at: 'desc' },
-            select: {
-                mbr_id: true,
-                name_kFull: true,
-                name_eFirst: true,
-                name_eLast: true,
-                email: true,
-                city: true,
-                postal: true
-            },
-            take: MEMBERS_PER_PAGE,
-            skip: offset
-        }),
-        prisma.member.count({ where })
-    ]);
+	const q = query.trim();
 
-    return {
-        data: rows,
-        pagination: {
-            currentPage: page,
-            pageSize: MEMBERS_PER_PAGE,
-            totalItems: totalCount,
-            totalPages: Math.ceil(totalCount / MEMBERS_PER_PAGE)
-        }
-    };
+	const where: Prisma.MemberWhereInput =
+			q.length > 0
+					? {
+							OR: [
+									{ name_kFull: { contains: q, mode: 'insensitive' } },
+									{ email: { contains: q, mode: 'insensitive' } },
+									{ address: { contains: q, mode: 'insensitive' } }
+							]
+					}
+					: {};
+	
+	const [rows, totalCount] = await Promise.all([
+		prisma.member.findMany({
+			where,
+			orderBy: { created_at: 'desc' },
+			select: {
+					mbr_id: true,
+					name_kFull: true,
+					name_eFirst: true,
+					name_eLast: true,
+					email: true,
+					city: true,
+					postal: true
+			},
+			take: MEMBERS_PER_PAGE,
+			skip: offset
+		}),
+		prisma.member.count({ where })
+	]);
+
+	return {
+		data: rows,
+		pagination: {
+				currentPage: page,
+				pageSize: MEMBERS_PER_PAGE,
+				totalItems: totalCount,
+				totalPages: Math.ceil(totalCount / MEMBERS_PER_PAGE)
+		}
+	};
 };
 // Member list page actions - end
 
 
 
 export type IncomeKpi = {
-    yearTotalCents: number;
-    monthTotalCents: number;
-    donationCount: number;
-    uniqueDonors: number;
+	yearTotalCents: number;
+	monthTotalCents: number;
+	donationCount: number;
+	uniqueDonors: number;
 };
 
 export const getIncomeKpis = async (year: number): Promise<IncomeKpi> => {
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const [yearAgg, monthAgg, donationCount, uniqueDonors] = await Promise.all([
-        prisma.income.aggregate({
-            where: { year },
-            _sum: { amount: true },
-        }),
-        prisma.income.aggregate({
-            where: { year, month },
-            _sum: { amount: true },
-        }),
-        prisma.income.count({ where: { year } }),
-        prisma.income.groupBy({
-            by: ['member'],
-            where: {
-                year,
-                member: { not: null }, 
-            },
-        }),
-    ]);
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
 
-    return {
-        yearTotalCents: yearAgg._sum.amount ?? 0,
-        monthTotalCents: monthAgg._sum.amount ?? 0,
-        donationCount,
-        uniqueDonors: uniqueDonors.length,
-    };
+	const now = new Date();
+	const month = now.getMonth() + 1;
+	const [yearAgg, monthAgg, donationCount, uniqueDonors] = await Promise.all([
+		prisma.income.aggregate({
+			where: { year },
+			_sum: { amount: true },
+		}),
+		prisma.income.aggregate({
+			where: { year, month },
+			_sum: { amount: true },
+		}),
+		prisma.income.count({ where: { year } }),
+		prisma.income.groupBy({
+			by: ['member'],
+			where: {
+					year,
+					member: { not: null }, 
+			},
+		}),
+	]);
+
+	return {
+		yearTotalCents: yearAgg._sum.amount ?? 0,
+		monthTotalCents: monthAgg._sum.amount ?? 0,
+		donationCount,
+		uniqueDonors: uniqueDonors.length,
+	};
 };
 
 // For the dashboard stats 
@@ -388,95 +439,110 @@ export type MonthlyTotal = { month: number; totalCents: number; };
 
 // Monthly
 export const getMonthlyTotals = async (year: number): Promise<MonthlyTotal[]> => {
-    const rows = await prisma.income.groupBy({
-        by: ['month'],
-        where: { year, amount: { not: null }, month: { not: null } },
-        _sum: { amount: true },
-        orderBy: { month: 'asc' },
-    });
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
 
-    const map = new Map(rows.map(r => [r.month ?? 0, r._sum.amount ?? 0]));
+	const rows = await prisma.income.groupBy({
+			by: ['month'],
+			where: { year, amount: { not: null }, month: { not: null } },
+			_sum: { amount: true },
+			orderBy: { month: 'asc' },
+	});
 
-    return Array.from({ length: 12 }, (_, i) => {
-        const m = i + 1;
-        return { month: m, totalCents: map.get(m) ?? 0 };
-    });
+	const map = new Map(rows.map(r => [r.month ?? 0, r._sum.amount ?? 0]));
+
+	return Array.from({ length: 12 }, (_, i) => {
+			const m = i + 1;
+			return { month: m, totalCents: map.get(m) ?? 0 };
+	});
 };
 
 // Quarterly
 export type QuarterlyTotal = { quarter: number; totalCents: number; };
 
 export const getQuarterlyTotals = async (year: number): Promise<QuarterlyTotal[]> => {
-    const rows = await prisma.income.groupBy({
-        by: ['qt'],
-        where: { year, amount: { not: null }, qt: { not: null } },
-        _sum: { amount: true },
-        orderBy: { qt: 'asc' },
-    });
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
+	const rows = await prisma.income.groupBy({
+		by: ['qt'],
+		where: { year, amount: { not: null }, qt: { not: null } },
+		_sum: { amount: true },
+		orderBy: { qt: 'asc' },
+	});
 
-    const map = new Map(rows.map(r => [r.qt ?? 0, r._sum.amount ?? 0]));
-    return [1,2,3,4].map((q) => ({ quarter: q, totalCents: map.get(q) ?? 0 }));
+	const map = new Map(rows.map(r => [r.qt ?? 0, r._sum.amount ?? 0]));
+	return [1,2,3,4].map((q) => ({ quarter: q, totalCents: map.get(q) ?? 0 }));
 };
 
 // Breakdown by Type (헌금종류)
 export type CategoryBreakDownRow = { id: number; name: string; totalCents: number };
 
 export const getTypeBreakdown = async (year: number): Promise<CategoryBreakDownRow[]> => {
-    const rows = await prisma.income.groupBy({
-        by: ['inc_type'],
-        where: { year, amount: { not: null }, inc_type: { not: null } },
-        _sum: { amount: true },
-    });
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
+  
+const rows = await prisma.income.groupBy({
+		by: ['inc_type'],
+		where: { year, amount: { not: null }, inc_type: { not: null } },
+		_sum: { amount: true },
+	});
 
-    const ids = rows.map(r => r.inc_type!).filter(Boolean);
+	const ids = rows.map(r => r.inc_type!).filter(Boolean);
 
-    const cats = await prisma.category.findMany({
-        where: { ctg_id: { in: ids }, range: 'inc' },
-        select: { ctg_id: true, name: true, order: true },
-    });
+	const cats = await prisma.category.findMany({
+		where: { ctg_id: { in: ids }, range: 'inc' },
+		select: { ctg_id: true, name: true, order: true },
+	});
 
-    const sumMap = new Map(rows.map(r => [r.inc_type!, r._sum.amount ?? 0]));
-    const orderMap = new Map(cats.map(c => [c.ctg_id, c.order ?? 999]));
+	const sumMap = new Map(rows.map(r => [r.inc_type!, r._sum.amount ?? 0]));
+	const orderMap = new Map(cats.map(c => [c.ctg_id, c.order ?? 999]));
 
-    const rowsWithOrder = cats
-        .map((c) => ({
-            id: c.ctg_id,
-            name: c.name,
-            totalCents: sumMap.get(c.ctg_id) ?? 0,
-            sortOrder: orderMap.get(c.ctg_id) ?? 999,
-        }))
-        .sort((a, b) => a.sortOrder - b.sortOrder);
+	const rowsWithOrder = cats
+		.map((c) => ({
+			id: c.ctg_id,
+			name: c.name,
+			totalCents: sumMap.get(c.ctg_id) ?? 0,
+			sortOrder: orderMap.get(c.ctg_id) ?? 999,
+		}))
+		.sort((a, b) => a.sortOrder - b.sortOrder);
 
-    return rowsWithOrder.map(({ id, name, totalCents }) => ({ id, name, totalCents }));
+	return rowsWithOrder.map(({ id, name, totalCents }) => ({ id, name, totalCents }));
 };
 
 
 // Breaktdown by method (헌금 납입 방법)
 export const getMethodBreakdown = async (year: number): Promise<CategoryBreakDownRow[]> => {
-    const rows = await prisma.income.groupBy({
-        by: ['inc_method'],
-        where: { year, amount: { not: null }, inc_method: { not: null } },
-        _sum: { amount: true },
-    });
+	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+    throw new Error('Forbidden');
+	}
 
-    const ids = rows.map(r => r.inc_method!).filter(Boolean);
+	const rows = await prisma.income.groupBy({
+		by: ['inc_method'],
+		where: { year, amount: { not: null }, inc_method: { not: null } },
+		_sum: { amount: true },
+	});
 
-    const cats = await prisma.category.findMany({
-        where: { ctg_id: { in: ids }, range: 'imd' },
-        select: { ctg_id: true, name: true, order: true },
-    });
+	const ids = rows.map(r => r.inc_method!).filter(Boolean);
 
-    const sumMap = new Map(rows.map(r => [r.inc_method!, r._sum.amount ?? 0]));
-    const orderMap = new Map(cats.map(c => [c.ctg_id, c.order ?? 999]));
+	const cats = await prisma.category.findMany({
+		where: { ctg_id: { in: ids }, range: 'imd' },
+		select: { ctg_id: true, name: true, order: true },
+	});
 
-    const rowsWithOrder = cats
-        .map((c) => ({
-            id: c.ctg_id,
-            name: c.name,
-            totalCents: sumMap.get(c.ctg_id) ?? 0,
-            sortOrder: orderMap.get(c.ctg_id) ?? 999,
-        }))
-        .sort((a, b) => a.sortOrder - b.sortOrder);
+	const sumMap = new Map(rows.map(r => [r.inc_method!, r._sum.amount ?? 0]));
+	const orderMap = new Map(cats.map(c => [c.ctg_id, c.order ?? 999]));
 
-    return rowsWithOrder.map(({ id, name, totalCents }) => ({ id, name, totalCents }));
+	const rowsWithOrder = cats
+		.map((c) => ({
+			id: c.ctg_id,
+			name: c.name,
+			totalCents: sumMap.get(c.ctg_id) ?? 0,
+			sortOrder: orderMap.get(c.ctg_id) ?? 999,
+		}))
+		.sort((a, b) => a.sortOrder - b.sortOrder);
+
+	return rowsWithOrder.map(({ id, name, totalCents }) => ({ id, name, totalCents }));
 };

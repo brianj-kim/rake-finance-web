@@ -1,5 +1,7 @@
 import { prisma } from "@/app/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE_NAME, verifySession } from "@/app/lib/auth";
+import { PERMISSIONS } from "@/app/lib/rbac";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -7,6 +9,22 @@ export const GET = async (
   req: NextRequest,
   ctx: Ctx,
 ) => {
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  let session;
+  try {
+    session = await verifySession(token);
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!session.permissionCodes.includes(PERMISSIONS.INCOME_READ)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const { id } = await ctx.params;
   const incomeId = Number(id);
 

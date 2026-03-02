@@ -5,10 +5,15 @@ import { Prisma } from '@prisma/client';
 import { BatchFormValues, BatchSchema, IncomeSchema, SaveBatchIncomeResult } from '@/app/lib/definitions';
 import { nameKey } from '@/lib/utils';
 import { prisma } from '@/app/lib/prisma';
+import { canAccess } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 export const saveBatchIncome = async (
   values: BatchFormValues
 ): Promise<SaveBatchIncomeResult> => {
+  if (!(await canAccess(PERMISSIONS.INCOME_CREATE))) {
+    return { success: false, message: 'Forbidden' };
+  }
 
   const parsed = BatchSchema.safeParse(values);
   if (!parsed.success) return { success: false, message: 'Invalid form values.'};
@@ -124,6 +129,10 @@ export const saveBatchIncome = async (
 
 
 export const updateIncome = async (id: number, formData: FormData) => {
+  if (!(await canAccess(PERMISSIONS.INCOME_UPDATE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   // Convert FormData to object for Zod validation
   const rawData = {
     name: formData.get('name'),
@@ -196,6 +205,13 @@ export const updateIncome = async (id: number, formData: FormData) => {
 }
 
 export const deleteIncome = async (incomeId: number) => {
+  if (!(await canAccess(PERMISSIONS.INCOME_DELETE))) {
+    return {
+      success: false,
+      message: 'Forbidden'
+    };
+  }
+
   try {
     if(!incomeId || incomeId <= 0) {
       return {

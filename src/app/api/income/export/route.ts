@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from '@/app/lib/prisma';
+import { SESSION_COOKIE_NAME, verifySession } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 const toInt = (v: string | null) => {
   const n = Number(v);
@@ -10,6 +12,22 @@ const toInt = (v: string | null) => {
 export const runtime = 'nodejs';
 
 export const GET = async (req: NextRequest) => {
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (!token) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  let session;
+  try {
+    session = await verifySession(token);
+  } catch {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  if (!session.permissionCodes.includes(PERMISSIONS.INCOME_READ)) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
 
   const year = toInt(searchParams.get('year'));

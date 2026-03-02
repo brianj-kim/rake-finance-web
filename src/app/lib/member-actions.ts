@@ -7,6 +7,10 @@ import { normalizeSpaces, normalizePostal } from '@/lib/utils';
 import { prisma } from './prisma';
 import { EditMemberDTO } from './definitions';
 
+import { canAccess } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
+
+
 const MEMBER_LIST_PATH = '/income/member';
 
 type ActionOK<T extends object = object> = { success: true } & T;
@@ -19,6 +23,10 @@ const isP2002 = (e: unknown) =>
 const MemberIdSchema = z.coerce.number().int().positive();
 
 export const getMemberForEdit = async (mbrId: unknown): Promise<ActionResult<{ member: EditMemberDTO }>> => {
+  if (!(await canAccess(PERMISSIONS.MEMBER_READ))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   const parsedId = MemberIdSchema.safeParse(mbrId);
   if (!parsedId.success) return { success: false, message: 'Invalid member id.' };
 
@@ -83,6 +91,10 @@ const UpdateMemberSchema = z.object({
 });
 
 export const updateMember = async (input: unknown): Promise<ActionResult> => {
+  if (!(await canAccess(PERMISSIONS.MEMBER_UPDATE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   const parsed = UpdateMemberSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -146,6 +158,10 @@ export const updateMember = async (input: unknown): Promise<ActionResult> => {
 };
 
 export const deleteMember = async (mbrId: number): Promise<ActionResult> => {
+  if (!(await canAccess(PERMISSIONS.MEMBER_DELETE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   try {
     await prisma.member.delete({ where: { mbr_id: mbrId } });
     revalidatePath(MEMBER_LIST_PATH);
@@ -184,6 +200,10 @@ const CreateMemberSchema = z.object({
 });
 
 export const createMember = async (input: unknown): Promise<ActionResult<{ memberId: number}>> => {
+  if (!(await canAccess(PERMISSIONS.MEMBER_CREATE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   const parsed = CreateMemberSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};

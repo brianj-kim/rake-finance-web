@@ -7,6 +7,72 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AdminRole {
+  super
+  treasurer
+  pastor
+}
+
+// Added for admin feature
+model Admin {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique @db.VarChar(120)
+  passwordHash  String    @db.VarChar(255)
+  name          String?   @db.VarChar(80)
+  role          AdminRole @default(treasurer) // legacy; remove phase 2
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  adminRoles    AdminRoleAssignment[]
+}
+
+model Role {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique @db.VarChar(50)
+  name        String      @db.VarChar(100)
+  isSystem    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  adminRoles  AdminRoleAssignment[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique @db.VarChar(80)
+  name        String      @db.VarChar(120)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId        Int
+  permissionId  Int
+  createdAt     DateTime    @default(now())
+
+  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model AdminRoleAssignment {
+  adminId       Int
+  roleId        Int
+  assignedAt    DateTime    @default(now())
+
+  admin         Admin       @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([adminId, roleId])
+  @@index([roleId])
+}
+
 model CharityProfile {
   id                Int @id @default(1)
   legalName         String @db.VarChar(120)
@@ -17,6 +83,7 @@ model CharityProfile {
   registrationNo    String @db.VarChar(20)
   locationIssued    String @db.VarChar(60)
   authorizedSigner  String @db.VarChar(80)  // Name/Title shown on receipt
+  authorizedSignature String? @db.VarChar(255) // signature image url
   updatedAt         DateTime @updatedAt
 }
 
@@ -45,9 +112,8 @@ model Receipt {
   charityRegNo    String  @db.VarChar(20)
   locationIssued  String  @db.VarChar(60)
   authorizedSigner String @db.VarChar(80)
-
+  authorizedSignatureUrl String?  @db.VarChar(255)
   pdfUrl          String?
-
   Member          Member   @relation(fields: [memberId], references: [mbr_id])
 
   @@unique([taxYear, serialNumber])
@@ -117,16 +183,4 @@ view IncomeList {
   qt         Int?      @db.SmallInt
   created_at DateTime? @db.Timestamp(6)
   method     String?   @db.VarChar(20)
-}
-
-// Added for admin feature
-model Admin {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique @db.VarChar(120)
-  passwordHash String   @db.VarChar(255)
-  name         String?  @db.VarChar(80)
-  role         String   @default("admin") @db.VarChar(20) // optional
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 }

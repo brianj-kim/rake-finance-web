@@ -13,6 +13,9 @@ import { formatEnglishName, truncate } from '@/app/lib/utils';
 import { bufferFromReactPdf } from '@/app/lib/pdf/buffer-from-react-pdf';
 import type { ActionFail, ActionOK, ActionResult } from '@/app/lib/definitions';
 
+import { canAccess } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
+
 const toISODate = (d: Date) => d.toISOString().slice(0, 10);
 
 const isUniqueViolation = (err: unknown) => 
@@ -27,6 +30,10 @@ export const generateReceiptForSelected = async (input: {
   taxYear: number;
   incomeIds: number[];
 }): Promise<ActionResult<{ receiptId: string; serialNumber: number; pdfUrl: string }>> => {
+  if (!(await canAccess(PERMISSIONS.RECEIPT_GENERATE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   const memberId = Number(input.memberId);
   const taxYear = Number(input.taxYear);
 
@@ -214,6 +221,10 @@ const safePublicFilePathFromUrl = (pdfUrl: string | null | undefined) => {
 export const deleteReceiptAndFile = async (input: {
   receiptId: string;
 }): Promise<DeleteReceiptResult> => {
+  if (!(await canAccess(PERMISSIONS.RECEIPT_DELETE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   const receiptId = String(input.receiptId || '').trim();
   if (!receiptId) return { success: false, message: 'Invalid receiptId'};
 
@@ -442,6 +453,10 @@ export const generateReceiptsForYearBatch = async (input: {
     failures: Array<{ memberId: number; message: string }>;
   }>
 > => {
+  if (!(await canAccess(PERMISSIONS.RECEIPT_GENERATE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   const taxYear = Number(input.taxYear);
   const cursor = Math.max(0, Number(input.cursor ?? 0) || 0);
   const batchSize = Math.min(50, Math.max(1, Number(input.batchSize ?? 20) || 20));
@@ -536,6 +551,10 @@ export const generateReceiptsForYearBatch = async (input: {
 export const deleteReceiptsAndFiles = async (input: {
   receiptIds: string[];
 }): Promise<ActionResult<{ deleted: number }>> => {
+  if (!(await canAccess(PERMISSIONS.RECEIPT_DELETE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
   const receiptIds = Array.from(
     new Set((input.receiptIds ?? []).map((s) => String(s).trim()))
   ).filter(Boolean);
