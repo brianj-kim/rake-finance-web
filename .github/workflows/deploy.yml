@@ -1,0 +1,76 @@
+name: Deploy rkac-finance (Next.js)
+
+  on:
+    push:
+      branches: [main]
+    workflow_dispatch:
+
+  concurrency:
+    group: rkac-finance-prod
+    cancel-in-progress: true
+
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Setup Node
+          uses: actions/setup-node@v4
+          with:
+            node-version: 20
+            cache: pnpm
+
+        - name: Setup pnpm
+          uses: pnpm/action-setup@v4
+          with:
+            version: 9
+
+        - name: Install / Test / Build
+          run: |
+            pnpm install --frozen-lockfile
+            pnpm test --if-present
+            pnpm build
+
+    deploy:
+      runs-on: ubuntu-latest
+      needs: build
+      environment: production
+      steps:
+        - name: Start SSH agent
+          uses: webfactory/ssh-agent@v0.9.0
+          with:
+            ssh-private-key: ${{ secrets.PROD_SSH_KEY }}
+
+        - name: Add known_hosts
+          run: |
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            echo "${{ secrets.PROD_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+
+        - name: Deploy on server
+          run: |
+            ssh -p "${{ secrets.PROD_SSH_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" '
+              set -euo pipefail
+
+              APP_DIR="/home/brian/apps/rkac-finance"
+              REPO_URL="https://github.com/${{ github.repository }}.git"
+
+              mkdir -p "$APP_DIR"
+              cd "$APP_DIR"
+
+              if [ ! -d .git ]; then
+                git init
+                git remote add origin "$REPO_URL"
+              fi
+
+              git fetch --depth=1 origin "${{ github.sha }}"
+              git checkout -f FETCH_HEAD
+
+              pnpm install --frozen-lockfile
+              pnpm build
+
+              sudo /bin/systemctl restart rkac-finance.service
+              sudo /bin/systemctl status rkac-finance.service --no-pager
