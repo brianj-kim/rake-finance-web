@@ -1,16 +1,16 @@
 name: "Deploy rkac-finance (Next.js)"
 
-  'on':
+on:
     push:
       branches:
         - main
     workflow_dispatch: {}
 
-  concurrency:
+concurrency:
     group: rkac-finance-prod
     cancel-in-progress: true
 
-  jobs:
+jobs:
     build:
       runs-on: ubuntu-latest
       steps:
