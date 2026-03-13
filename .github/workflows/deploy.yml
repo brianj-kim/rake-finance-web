@@ -59,4 +59,4 @@ jobs:
       - name: Deploy on server
         run: |
           ssh -p "${{ secrets.PROD_SSH_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
-            "DEPLOY_SHA=${{ github.sha }} bash /home/deploy/bin/deploy-rkac-finance.sh"
+            "git config --global --add safe.directory /home/brian/apps/rkac-finance && DEPLOY_SHA=${{ github.sha }} bash /home/deploy/bin/deploy-rkac-finance.sh"
