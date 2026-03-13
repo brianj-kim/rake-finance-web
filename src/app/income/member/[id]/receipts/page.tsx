@@ -4,12 +4,17 @@ import { lusitana } from '@/app/ui/fonts';
 import { formatCurrency } from '@/app/lib/utils';
 
 import GenerateReceiptForm from '@/app/ui/receipt/generate-receipt-form';
+import { canAccess, requirePermission } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 const MemberReceiptsPage = async (props: {
   params: Promise<{ id: string }>;
 }) => {
+  await requirePermission(PERMISSIONS.RECEIPT_READ, { nextPath: '/income/member' });
+
   const { id } = await props.params;
   const memberId = Number(id);
+  const canGenerateReceipt = await canAccess(PERMISSIONS.RECEIPT_GENERATE);
 
   const member = await prisma.member.findUnique({
     where: { mbr_id: memberId },
@@ -68,9 +73,11 @@ const MemberReceiptsPage = async (props: {
             Back to members
           </Link>
 
-          <div className='sm:min-2-[360px]'>
-            <GenerateReceiptForm memberId={memberId} />
-          </div>
+          {canGenerateReceipt ? (
+            <div className='sm:min-2-[360px]'>
+              <GenerateReceiptForm memberId={memberId} />
+            </div>
+          ) : null}
         </div>
       </div>
 

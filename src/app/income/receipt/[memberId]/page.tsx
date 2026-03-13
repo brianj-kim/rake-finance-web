@@ -5,6 +5,8 @@ import { toInt } from '@/app/lib/utils';
 import { getMemberDonationsForYear, getReceiptMemberInfo } from '@/app/lib/receipt-data';
 import DonationSelector from '@/app/ui/receipt/donation-selector';
 import MemberDetailActions from '@/app/ui/receipt/member-detail-actions';
+import { canAccess, requirePermission } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 export const runtime = 'nodejs';
 
@@ -12,6 +14,8 @@ const ReceiptMemberPage = async (props: {
   params: Promise<{ memberId: string }>;
   searchParams: Promise<{ year?: string }>;
 }) => {
+  await requirePermission(PERMISSIONS.RECEIPT_READ, { nextPath: '/income/receipt' });
+
   const params = await props.params;
   const searchParams = await props.searchParams;
 
@@ -19,9 +23,11 @@ const ReceiptMemberPage = async (props: {
   const currentYear = new Date().getFullYear();
   const selectedYear = toInt(searchParams?.year) ?? currentYear
 
-  const [member, donations] = await Promise.all([
+  const [member, donations, canEditMember, canGenerateReceipt] = await Promise.all([
     getReceiptMemberInfo({ memberId: memberId }),
     getMemberDonationsForYear({ memberId: memberId, taxYear: selectedYear }),
+    canAccess(PERMISSIONS.MEMBER_UPDATE),
+    canAccess(PERMISSIONS.RECEIPT_GENERATE),
   ]);
 
   if (!member) {
@@ -71,10 +77,15 @@ const ReceiptMemberPage = async (props: {
           </div>
         </div>
 
-        <MemberDetailActions memberId={memberId} />
+        {canEditMember ? <MemberDetailActions memberId={memberId} /> : null}
       </div>
 
-      <DonationSelector memberId={memberId} taxYear={selectedYear} donations={donations} />
+      <DonationSelector
+        memberId={memberId}
+        taxYear={selectedYear}
+        donations={donations}
+        canGenerateReceipt={canGenerateReceipt}
+      />
     </main>
   )
 }

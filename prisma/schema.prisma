@@ -83,6 +83,10 @@ model CharityProfile {
   registrationNo    String @db.VarChar(20)
   locationIssued    String @db.VarChar(60)
   authorizedSigner  String @db.VarChar(80)  // Name/Title shown on receipt
+  charityEmail      String? @db.VarChar(80)
+  charityPhone      String? @db.VarChar(20)
+  charityWebsite    String? @db.VarChar(120)
+  churchLogoUrl     String? @db.VarChar(255)
   authorizedSignature String? @db.VarChar(255) // signature image url
   updatedAt         DateTime @updatedAt
 }
@@ -110,6 +114,10 @@ model Receipt {
   charityProvince String  @db.VarChar(20)
   charityPostal   String  @db.VarChar(7)
   charityRegNo    String  @db.VarChar(20)
+  charityEmail    String? @db.VarChar(80)
+  charityPhone    String? @db.VarChar(20)
+  charityWebsite  String? @db.VarChar(120)
+  churchLogoUrl   String? @db.VarChar(255)
   locationIssued  String  @db.VarChar(60)
   authorizedSigner String @db.VarChar(80)
   authorizedSignatureUrl String?  @db.VarChar(255)

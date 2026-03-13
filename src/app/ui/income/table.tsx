@@ -8,6 +8,8 @@ type IncomeTableProps = {
   incomeList: IncomeList[];
   incomeTypes: CategoryDTO[];
   incomeMethods: CategoryDTO[];
+  canUpdateIncome: boolean;
+  canDeleteIncome: boolean;
 }
 
 const formatDate = (y?: number | null, m?: number | null, d?: number | null) => {
@@ -15,7 +17,13 @@ const formatDate = (y?: number | null, m?: number | null, d?: number | null) => 
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 ;}
 
-const IncomeTable = async ({ incomeList, incomeTypes, incomeMethods }: IncomeTableProps) => {
+const IncomeTable = async ({
+  incomeList,
+  incomeTypes,
+  incomeMethods,
+  canUpdateIncome,
+  canDeleteIncome,
+}: IncomeTableProps) => {
     
   return (
     <div className='mt-6 flow-root'>
@@ -66,6 +74,8 @@ const IncomeTable = async ({ incomeList, incomeTypes, incomeMethods }: IncomeTab
                     income={income}
                     incomeTypes={incomeTypes}
                     incomeMethods={incomeMethods}
+                    canUpdate={canUpdateIncome}
+                    canDelete={canDeleteIncome}
                   />
                 </div>
               </div>
@@ -119,6 +129,8 @@ const IncomeTable = async ({ incomeList, incomeTypes, incomeMethods }: IncomeTab
                             income={income}
                             incomeTypes={incomeTypes}
                             incomeMethods={incomeMethods}
+                            canUpdate={canUpdateIncome}
+                            canDelete={canDeleteIncome}
                           />
                         </div>
                       </td>

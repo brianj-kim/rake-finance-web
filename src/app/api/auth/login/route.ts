@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/app/lib/prisma';
 import { signSession } from '@/app/lib/auth';
 import type { PermissionCode } from '@/app/lib/rbac';
-import { ROLE_PERMISSION_BOOTSTRAP } from '@/app/lib/rbac';
+import { isPermissionCode, ROLE_PERMISSION_BOOTSTRAP } from '@/app/lib/rbac';
 
 export const POST = async (req: Request) => {
   const { email, password } = await req.json().catch(() => ({}));
@@ -42,19 +42,21 @@ export const POST = async (req: Request) => {
   }
 
   const ok = await bcrypt.compare(String(password), admin.passwordHash);
-  if (!ok) return NextResponse.json({ error: 'Invalid credntials' }, { status: 401 });
+  if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
 
   const roleCodesFromDb = admin.adminRoles.map((r) => r.role.code);
-  const roleCodes = roleCodesFromDb.length > 0 ? roleCodesFromDb : [admin.role];
+  const roleCodes = [...new Set(roleCodesFromDb.length > 0 ? roleCodesFromDb : [admin.role])];
 
   const permissionSet = new Set<PermissionCode>();
   for (const ar of admin.adminRoles) {
     for (const rp of ar.role.permissions) {
-      permissionSet.add(rp.permission.code as PermissionCode);
+      const code = rp.permission.code;
+      if (isPermissionCode(code)) permissionSet.add(code);
     }
   }
 
-  if (permissionSet.size === 0) {
+  // Transitional fallback: only use legacy Admin.role permissions when no RBAC role is assigned.
+  if (admin.adminRoles.length === 0) {
     for (const p of ROLE_PERMISSION_BOOTSTRAP[admin.role] ?? []) {
       permissionSet.add(p);
     }

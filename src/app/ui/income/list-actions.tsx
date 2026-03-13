@@ -11,9 +11,11 @@ type Props = {
   income: IncomeList;
   incomeTypes: CategoryDTO[];
   incomeMethods: CategoryDTO[];
+  canUpdate: boolean;
+  canDelete: boolean;
 };
 
-const ListActions = ({ income, incomeTypes, incomeMethods }: Props) => {
+const ListActions = ({ income, incomeTypes, incomeMethods, canUpdate, canDelete }: Props) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -21,7 +23,7 @@ const ListActions = ({ income, incomeTypes, incomeMethods }: Props) => {
 
   return (
     <div className='flex justify-end gap-2'>
-      {typeof id === 'number' ? (
+      {typeof id === 'number' && canUpdate ? (
         <button
           type='button'
           onClick={() => setEditOpen(true)}
@@ -39,18 +41,18 @@ const ListActions = ({ income, incomeTypes, incomeMethods }: Props) => {
       <button
         type='button'
         onClick={() => setDeleteOpen(true)}
-        disabled={typeof id !== 'number'}
+        disabled={typeof id !== 'number' || !canDelete}
         className='rounded-md border p-2 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40'
         aria-label='Delete Income'        
       >
         <TrashIcon className='w-5' />
       </button>
 
-      {deleteOpen && typeof id === 'number' ? (
+      {deleteOpen && typeof id === 'number' && canDelete ? (
         <DeleteIncomeDialog income={income} onClose={() => setDeleteOpen(false)} />
       ) : null}
 
-      {editOpen && typeof id === 'number' ? (
+      {editOpen && typeof id === 'number' && canUpdate ? (
         <EditIncomeDialog 
           open={editOpen}
           onOpenChange={setEditOpen}

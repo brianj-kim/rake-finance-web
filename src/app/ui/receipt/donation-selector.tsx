@@ -17,8 +17,9 @@ const DonationSelector = (props: {
   memberId: number;
   taxYear: number;
   donations: DonationRow[];
+  canGenerateReceipt: boolean;
 }) => {
-  const { memberId, taxYear, donations } = props;
+  const { memberId, taxYear, donations, canGenerateReceipt } = props;
 
   const [selected, setSelected] = React.useState<Set<number>>(
     () => new Set(donations.map((d) => d.incId))
@@ -53,6 +54,11 @@ const DonationSelector = (props: {
   };
 
   const onGenerate = () => {
+    if (!canGenerateReceipt) {
+      toast.error('You do not have permission to generate receipts.');
+      return;
+    }
+
     const incomeIds = Array.from(selected.values());
     if (incomeIds.length === 0) {
       toast.error('Select at leat one donations.');
@@ -95,9 +101,11 @@ const DonationSelector = (props: {
           <Button type="button" variant="outline" onClick={onToggleAll}>
             {allSelected ? 'Deselect all' : 'Select all'}
           </Button>
-          <Button type="button" onClick={onGenerate} disabled={pending} className='bg-blue-600 border-blue-600'>
-            {pending ? 'Generating…' : 'Generate receipt'}
-          </Button>
+          {canGenerateReceipt ? (
+            <Button type="button" onClick={onGenerate} disabled={pending} className='bg-blue-600 border-blue-600'>
+              {pending ? 'Generating…' : 'Generate receipt'}
+            </Button>
+          ) : null}
         </div>
       </div>
 

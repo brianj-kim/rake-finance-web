@@ -4,6 +4,8 @@ import { prisma } from '@/app/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { ReceiptListResult } from './definitions';
 import { RECEIPT_EXCLUDE_NAMES } from '@/app/lib/receipt-constants';
+import { canAccess } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 const ITEMS_PER_PAGE = 30;
 
@@ -13,6 +15,10 @@ export const fetchReceipts = async (input: {
   page: number;
   taxYear: number;
 }): Promise<ReceiptListResult> => {
+  if (!(await canAccess(PERMISSIONS.RECEIPT_READ))) {
+    throw new Error('Forbidden');
+  }
+
   const query = (input.query ?? '').trim();
   const page = Math.max(1, Number(input.page) || 1);
   const taxYear = Number(input.taxYear);

@@ -2,6 +2,8 @@ import { getIncomeMethods, getIncomeTypes } from '@/app/lib/data';
 import { prisma } from '@/app/lib/prisma';
 import EditIncomeForm from '@/app/ui/income/edit-form';
 import { notFound } from 'next/navigation';
+import { requirePermission } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 const EditIncomePage = async ({
   params,
@@ -9,6 +11,8 @@ const EditIncomePage = async ({
   params: { id: string };
   searchParams?: { returnYear?: string };
 }) => {  
+  await requirePermission(PERMISSIONS.INCOME_UPDATE, { nextPath: '/income/list' });
+
   const incomeId = Number(params.id);
   if (!Number.isInteger(incomeId) || incomeId <= 0) notFound();
 

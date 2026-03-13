@@ -30,6 +30,10 @@ export const PERMISSIONS = {
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 export const ALL_PERMISSION_CODES = Object.values(PERMISSIONS) as PermissionCode[];
+const PERMISSION_CODE_SET = new Set<string>(ALL_PERMISSION_CODES);
+
+export const isPermissionCode = (value: unknown): value is PermissionCode =>
+  typeof value === 'string' && PERMISSION_CODE_SET.has(value);
 
 const TREASURER_PERMISSION_CODES: PermissionCode[] = [
   PERMISSIONS.INCOME_READ,
@@ -42,7 +46,6 @@ const TREASURER_PERMISSION_CODES: PermissionCode[] = [
   PERMISSIONS.MEMBER_DELETE,
   PERMISSIONS.RECEIPT_READ,
   PERMISSIONS.RECEIPT_GENERATE,
-  PERMISSIONS.RECEIPT_UPDATE,
   PERMISSIONS.RECEIPT_DELETE,
 ];
 

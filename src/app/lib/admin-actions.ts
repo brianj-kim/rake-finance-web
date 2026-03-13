@@ -3,8 +3,9 @@
 import bcrypt from 'bcryptjs';
 import { Prisma, type AdminRole as LegacyAdminRole } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { prisma } from '@/app/lib/prisma';
-import { requirePermission } from '@/app/lib/auth';
+import { requirePermission, requireSuperAdmin } from '@/app/lib/auth';
 import { PERMISSIONS, ROLE_CODES } from '@/app/lib/rbac';
 import {
   ActionResult,
@@ -16,19 +17,100 @@ import {
 } from '@/app/lib/admin-definitions';
 
 const ADMINS_PATH = '/admin/admins';
+const CHARITY_PATH = '/admin/charity';
+const CATEGORIES_PATH = '/admin/categories';
 
 const isP2002 = (e: unknown) => 
   e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
 
-const mapZodErrors = (err: any) => {
+const mapZodErrors = (err: {
+  issues?: Array<{ path?: unknown[]; message?: string }>;
+}) => {
   const fieldErrors: Record<string, string> = {};
   for (const issue of err?.issues ?? []) {
     const key = String(issue.path?.[0] ?? 'form');
-    fieldErrors[key] = issue.message;
+    fieldErrors[key] = String(issue.message ?? 'Invalid value');
   }
 
   return fieldErrors;
 };
+
+const OptionalTrimmedString = (max: number) =>
+  z.preprocess((value) => {
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim();
+    return normalized === '' ? undefined : normalized;
+  }, z.string().max(max).optional());
+
+const OptionalEmailSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim();
+  return normalized === '' ? undefined : normalized;
+}, z.string().email('Invalid email format.').max(80).optional());
+
+const OptionalWebsiteSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim();
+  return normalized === '' ? undefined : normalized;
+}, z
+  .string()
+  .max(120)
+  .refine((v) => /^https?:\/\//i.test(v), 'Use a full URL starting with http:// or https://.')
+  .optional());
+
+const OptionalAssetUrlSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim();
+  return normalized === '' ? undefined : normalized;
+}, z
+  .string()
+  .max(255)
+  .refine(
+    (v) => v.startsWith('/') || v.startsWith('data:image/') || /^https?:\/\//i.test(v),
+    'Use an image URL (http/https), data URL, or root-relative path (/...).'
+  )
+  .optional());
+
+const OptionalOrderSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : value;
+}, z.number().int().min(0).max(32767).optional());
+
+const CharityProfileSchema = z.object({
+  legalName: z.string().trim().min(1).max(120),
+  address: z.string().trim().min(1).max(120),
+  city: z.string().trim().min(1).max(40),
+  province: z.string().trim().min(1).max(20),
+  postal: z.string().trim().min(1).max(7),
+  registrationNo: z.string().trim().min(1).max(20),
+  locationIssued: z.string().trim().min(1).max(60),
+  authorizedSigner: z.string().trim().min(1).max(80),
+  charityEmail: OptionalEmailSchema,
+  charityPhone: OptionalTrimmedString(20),
+  charityWebsite: OptionalWebsiteSchema,
+  churchLogoUrl: OptionalAssetUrlSchema,
+  authorizedSignature: OptionalAssetUrlSchema,
+});
+
+const CategoryRangeSchema = z.enum(['inc', 'imd']);
+const CategoryCreateSchema = z.object({
+  range: CategoryRangeSchema,
+  name: z.string().trim().min(1).max(20),
+  detail: OptionalTrimmedString(255),
+  order: OptionalOrderSchema,
+  isParent: z.preprocess((value) => value === 'on' || value === true || value === 'true', z.boolean()),
+});
+
+const CategoryUpdateSchema = CategoryCreateSchema.extend({
+  id: z.coerce.number().int().positive(),
+});
+
+const CategoryDeleteSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
 
 const toLegacyAdminRole = (roleCode: string): LegacyAdminRole => {
   if (roleCode === ROLE_CODES.SUPER) return 'super';
@@ -171,5 +253,200 @@ export const deleteAdmin = async (id: unknown): Promise<ActionResult> => {
     return { success: true };
   } catch {
     return { success: false, message: 'Failed to delete admin.' };
+  }
+};
+
+export const getCharityProfile = async () => {
+  await requireSuperAdmin({ nextPath: CHARITY_PATH });
+
+  const row = await prisma.charityProfile.findUnique({ where: { id: 1 } });
+  return row ?? {
+    id: 1,
+    legalName: '',
+    address: '',
+    city: '',
+    province: '',
+    postal: '',
+    registrationNo: '',
+    locationIssued: '',
+    authorizedSigner: '',
+    charityEmail: null,
+    charityPhone: null,
+    charityWebsite: null,
+    churchLogoUrl: null,
+    authorizedSignature: null,
+  };
+};
+
+export const saveCharityProfile = async (formData: FormData): Promise<ActionResult> => {
+  await requireSuperAdmin({ nextPath: CHARITY_PATH });
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = CharityProfileSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Validation failed.', fieldErrors: mapZodErrors(parsed.error) };
+  }
+
+  try {
+    await prisma.charityProfile.upsert({
+      where: { id: 1 },
+      update: {
+        legalName: parsed.data.legalName,
+        address: parsed.data.address,
+        city: parsed.data.city,
+        province: parsed.data.province,
+        postal: parsed.data.postal,
+        registrationNo: parsed.data.registrationNo,
+        locationIssued: parsed.data.locationIssued,
+        authorizedSigner: parsed.data.authorizedSigner,
+        charityEmail: parsed.data.charityEmail ?? null,
+        charityPhone: parsed.data.charityPhone ?? null,
+        charityWebsite: parsed.data.charityWebsite ?? null,
+        churchLogoUrl: parsed.data.churchLogoUrl ?? null,
+        authorizedSignature: parsed.data.authorizedSignature ?? null,
+      },
+      create: {
+        id: 1,
+        legalName: parsed.data.legalName,
+        address: parsed.data.address,
+        city: parsed.data.city,
+        province: parsed.data.province,
+        postal: parsed.data.postal,
+        registrationNo: parsed.data.registrationNo,
+        locationIssued: parsed.data.locationIssued,
+        authorizedSigner: parsed.data.authorizedSigner,
+        charityEmail: parsed.data.charityEmail ?? null,
+        charityPhone: parsed.data.charityPhone ?? null,
+        charityWebsite: parsed.data.charityWebsite ?? null,
+        churchLogoUrl: parsed.data.churchLogoUrl ?? null,
+        authorizedSignature: parsed.data.authorizedSignature ?? null,
+      },
+    });
+
+    revalidatePath(CHARITY_PATH);
+    return { success: true };
+  } catch (err) {
+    console.error('saveCharityProfile error:', err);
+    return { success: false, message: 'Failed to save charity profile.' };
+  }
+};
+
+export type CategoryAdminRow = {
+  id: number;
+  range: string | null;
+  name: string;
+  detail: string | null;
+  order: number | null;
+  isParent: boolean | null;
+  depth: string | null;
+};
+
+export const listCategories = async (): Promise<CategoryAdminRow[]> => {
+  await requirePermission(PERMISSIONS.ADMIN_MANAGE_CATEGORIES, { nextPath: CATEGORIES_PATH });
+
+  const rows = await prisma.category.findMany({
+    orderBy: [{ range: 'asc' }, { order: 'asc' }, { ctg_id: 'asc' }],
+    select: {
+      ctg_id: true,
+      range: true,
+      name: true,
+      detail: true,
+      order: true,
+      isParent: true,
+      depth: true,
+    },
+  });
+
+  return rows.map((row) => ({
+    id: row.ctg_id,
+    range: row.range ?? null,
+    name: row.name,
+    detail: row.detail ?? null,
+    order: row.order ?? null,
+    isParent: row.isParent ?? null,
+    depth: row.depth ?? null,
+  }));
+};
+
+export const createCategory = async (formData: FormData): Promise<ActionResult<{ id: number }>> => {
+  await requirePermission(PERMISSIONS.ADMIN_MANAGE_CATEGORIES, { nextPath: CATEGORIES_PATH });
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = CategoryCreateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Validation failed.', fieldErrors: mapZodErrors(parsed.error) };
+  }
+
+  try {
+    const created = await prisma.category.create({
+      data: {
+        range: parsed.data.range,
+        name: parsed.data.name,
+        detail: parsed.data.detail ?? null,
+        order: parsed.data.order ?? null,
+        isParent: parsed.data.isParent,
+      },
+      select: { ctg_id: true },
+    });
+
+    revalidatePath(CATEGORIES_PATH);
+    revalidatePath('/income/list');
+    revalidatePath('/income/list/create');
+    return { success: true, id: created.ctg_id };
+  } catch (err) {
+    console.error('createCategory error:', err);
+    return { success: false, message: 'Failed to create category.' };
+  }
+};
+
+export const updateCategory = async (formData: FormData): Promise<ActionResult> => {
+  await requirePermission(PERMISSIONS.ADMIN_MANAGE_CATEGORIES, { nextPath: CATEGORIES_PATH });
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = CategoryUpdateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Validation failed.', fieldErrors: mapZodErrors(parsed.error) };
+  }
+
+  try {
+    await prisma.category.update({
+      where: { ctg_id: parsed.data.id },
+      data: {
+        range: parsed.data.range,
+        name: parsed.data.name,
+        detail: parsed.data.detail ?? null,
+        order: parsed.data.order ?? null,
+        isParent: parsed.data.isParent,
+      },
+    });
+
+    revalidatePath(CATEGORIES_PATH);
+    revalidatePath('/income/list');
+    revalidatePath('/income/list/create');
+    return { success: true };
+  } catch (err) {
+    console.error('updateCategory error:', err);
+    return { success: false, message: 'Failed to update category.' };
+  }
+};
+
+export const deleteCategory = async (formData: FormData): Promise<ActionResult> => {
+  await requirePermission(PERMISSIONS.ADMIN_MANAGE_CATEGORIES, { nextPath: CATEGORIES_PATH });
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = CategoryDeleteSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Invalid category id.' };
+  }
+
+  try {
+    await prisma.category.delete({ where: { ctg_id: parsed.data.id } });
+    revalidatePath(CATEGORIES_PATH);
+    revalidatePath('/income/list');
+    revalidatePath('/income/list/create');
+    return { success: true };
+  } catch (err) {
+    console.error('deleteCategory error:', err);
+    return { success: false, message: 'Failed to delete category. It may be referenced by income records.' };
   }
 };

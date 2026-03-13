@@ -6,9 +6,10 @@ import EditMemberDialog from '@/app/ui/income/edit-member-dialog';
 
 type Props = {
   memberId: number;
+  canUpdate: boolean;
 };
 
-const MemberCardActions = ({ memberId }: Props) => {
+const MemberCardActions = ({ memberId, canUpdate }: Props) => {
   const [openEdit, setOpenEdit] = React.useState(false);
   // const [deleting, setDeleting] = React.useState(false);
 
@@ -47,16 +48,18 @@ const MemberCardActions = ({ memberId }: Props) => {
           Receipts
         </Button> */}
 
-        <Button size='sm' variant='outline' onClick={() => setOpenEdit(true)}>
-          Edit
-        </Button>
+        {canUpdate ? (
+          <Button size='sm' variant='outline' onClick={() => setOpenEdit(true)}>
+            Edit
+          </Button>
+        ) : null}
 
         {/* <Button size='sm' variant='secondary' onClick={onDelete} disabled={deleting} >
           {deleting ? 'Deleting...' : 'Delete'}
         </Button> */}
       </div>
 
-      <EditMemberDialog open={openEdit} onOpenChange={setOpenEdit} memberId={memberId} />
+      {canUpdate ? <EditMemberDialog open={openEdit} onOpenChange={setOpenEdit} memberId={memberId} /> : null}
     </>
   )
 }

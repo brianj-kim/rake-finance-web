@@ -1,8 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import type { PermissionCode } from '@/app/lib/rbac';
-import { ALL_PERMISSION_CODES } from '@/app/lib/rbac';
+import type { PermissionCode, RoleCode } from '@/app/lib/rbac';
+import { isPermissionCode, ROLE_CODES } from '@/app/lib/rbac';
 
 export const SESSION_COOKIE_NAME = 'session';
 const SESSION_TTL = '7d';
@@ -17,9 +17,6 @@ export type SessionPayload = {
 
 const isStringArray = (v:unknown): v is string[] =>
     Array.isArray(v) && v.every((x) => typeof x === 'string');
-
-const isPermissionCode = (v: unknown): v is PermissionCode =>
-  typeof v === 'string' && (ALL_PERMISSION_CODES as readonly string[]).includes(v);
 
 const getSecret = () => {
   const raw = process.env.AUTH_SECRET;
@@ -49,7 +46,7 @@ export const verifySession = async (token: string): Promise<SessionPayload> => {
   }
 
   if (!isStringArray(roleCodesRaw) || !isStringArray(permissionCodesRaw)) {
-    throw new Error('Inalid Session Payload');
+    throw new Error('Invalid Session Payload');
   }
 
   const roleCodes = [...new Set(roleCodesRaw.map((r) => r.trim()).filter(Boolean))];
@@ -87,11 +84,22 @@ export const hasAnyPermission = (
   permissions: readonly PermissionCode[]
 ) => Boolean(session && permissions.some((p) => session.permissionCodes.includes(p)));
 
+export const hasRole = (session: SessionPayload | null, roleCode: RoleCode) =>
+  Boolean(session && session.roleCodes.includes(roleCode));
+
+export const isSuperAdmin = (session: SessionPayload | null) =>
+  hasRole(session, ROLE_CODES.SUPER);
+
 export const canAccess = async (permission: PermissionCode) => {
   const session = await getSession();
 
   return hasPermission(session, permission);
-}
+};
+
+export const canAccessRole = async (roleCode: RoleCode) => {
+  const session = await getSession();
+  return hasRole(session, roleCode);
+};
 
 export const requirePermission = async (
   permission: PermissionCode,
@@ -112,6 +120,31 @@ export const requirePermission = async (
 
   return session;
 };
+
+export const requireRole = async (
+  roleCode: RoleCode,
+  options?: {
+    nextPath?: string;
+    unauthorizedRedirectTo?: string;
+  }
+) => {
+  const session = await getSession();
+  if (!session) {
+    if (options?.nextPath) redirect(`/login?next=${encodeURIComponent(options.nextPath)}`);
+    redirect('/login');
+  }
+
+  if (!session.roleCodes.includes(roleCode)) {
+    redirect(options?.unauthorizedRedirectTo ?? '/');
+  }
+
+  return session;
+};
+
+export const requireSuperAdmin = async (options?: {
+  nextPath?: string;
+  unauthorizedRedirectTo?: string;
+}) => requireRole(ROLE_CODES.SUPER, options);
 
 export const isSignedIn = async () => {
   return Boolean(await getSession());

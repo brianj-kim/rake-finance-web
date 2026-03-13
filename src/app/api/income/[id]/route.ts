@@ -29,7 +29,7 @@ export const GET = async (
   const incomeId = Number(id);
 
   if (!Number.isInteger(incomeId) || incomeId <= 0 ) {
-    return NextResponse.json({ error: 'Invaild id'}, { status: 400 });
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   }
 
   const income = await prisma.income.findUnique({
@@ -43,7 +43,7 @@ export const GET = async (
 
   return NextResponse.json({
     inc_id: income.inc_id,
-    name: income.Member?.name_kFull ?? 's',
+    name: income.Member?.name_kFull ?? '',
     amount: income.amount ?? 0,
     inc_type: income.inc_type ?? 0,
     inc_method: income.inc_method ?? 0,

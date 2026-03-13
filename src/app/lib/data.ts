@@ -9,6 +9,7 @@ import { normalizeName } from '@/lib/utils';
 import { prisma } from './prisma';
 
 import { canAccess } from '@/app/lib/auth';
+import type { PermissionCode } from '@/app/lib/rbac';
 import { PERMISSIONS } from '@/app/lib/rbac';
 
 const ITEMS_PER_PAGE = 30 as const;
@@ -20,6 +21,11 @@ type ActionResult<T extends object = object> = ActionOK<T> | ActionFail;
 
 const isP2002 = (e: unknown) => 
   e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+
+const canAccessAny = async (permissions: readonly PermissionCode[]) => {
+  const accessList = await Promise.all(permissions.map((p) => canAccess(p)));
+  return accessList.some(Boolean);
+};
 
 
 const buildIncomeListWhere = (args: {
@@ -176,14 +182,22 @@ const getCategoriesByRange = async (range: 'inc' | 'imd'): Promise<CategoryDTO[]
 };
 
 export const getIncomeTypes = async (): Promise<CategoryDTO[]> => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessAny([
+    PERMISSIONS.INCOME_READ,
+    PERMISSIONS.INCOME_CREATE,
+    PERMISSIONS.INCOME_UPDATE,
+  ]))) {
     throw new Error('Forbidden');
 	}
 
 	return getCategoriesByRange('inc');
 }
 export const getIncomeMethods = async (): Promise<CategoryDTO[]> => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessAny([
+    PERMISSIONS.INCOME_READ,
+    PERMISSIONS.INCOME_CREATE,
+    PERMISSIONS.INCOME_UPDATE,
+  ]))) {
     throw new Error('Forbidden');
 	}
 

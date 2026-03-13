@@ -100,6 +100,11 @@ export const generateReceiptForSelected = async (input: {
   const charityRegNo = truncate(charity.registrationNo, 20) ?? '-';
   const locationIssued = truncate(charity.locationIssued, 60) ?? '-';
   const authorizedSigner = truncate(charity.authorizedSigner, 80) ?? '-';
+  const charityEmail = truncate(charity.charityEmail, 80);
+  const charityPhone = truncate(charity.charityPhone, 20);
+  const charityWebsite = truncate(charity.charityWebsite, 120);
+  const churchLogoUrl = truncate(charity.churchLogoUrl, 255);
+  const authorizedSignatureUrl = truncate(charity.authorizedSignature, 255);
 
   const issueDate = new Date();
   const issueDateISO = toISODate(issueDate);
@@ -129,6 +134,11 @@ export const generateReceiptForSelected = async (input: {
             postal: charityPostal,
             locationIssued,
             authorizedSigner,
+            charityEmail,
+            charityPhone,
+            charityWebsite,
+            churchLogoUrl,
+            authorizedSignatureUrl,
           },
           donor: {
             name_official: donorName,
@@ -172,8 +182,13 @@ export const generateReceiptForSelected = async (input: {
             charityProvince,
             charityPostal,
             charityRegNo,
+            charityEmail,
+            charityPhone,
+            charityWebsite,
+            churchLogoUrl,
             locationIssued,
             authorizedSigner,
+            authorizedSignatureUrl,
 
             pdfUrl: null,
           },
@@ -201,6 +216,41 @@ export const generateReceiptForSelected = async (input: {
   }
 
   return { success: false, message: 'Failed due to serial-number conflicts. Please try again.'};
+};
+
+export const generateAnnualReceipt = async (input: {
+  memberId: number;
+  taxYear: number;
+}): Promise<ActionResult<{ receiptId: string; serialNumber: number; pdfUrl: string }>> => {
+  if (!(await canAccess(PERMISSIONS.RECEIPT_GENERATE))) {
+    return { success: false, message: 'Forbidden' };
+  }
+
+  const memberId = Number(input.memberId);
+  const taxYear = Number(input.taxYear);
+
+  if (!Number.isInteger(memberId) || memberId <= 0) {
+    return { success: false, message: 'Invalid memberId' };
+  }
+  if (!Number.isInteger(taxYear) || taxYear < 2000 || taxYear > 2100) {
+    return { success: false, message: 'Invalid tax year' };
+  }
+
+  const donations = await prisma.income.findMany({
+    where: { member: memberId, year: taxYear, amount: { gt: 0 } },
+    select: { inc_id: true },
+    orderBy: [{ month: 'asc' }, { day: 'asc' }, { inc_id: 'asc' }],
+  });
+
+  if (donations.length === 0) {
+    return { success: false, message: 'No donations found for that year.' };
+  }
+
+  return generateReceiptForSelected({
+    memberId,
+    taxYear,
+    incomeIds: donations.map((d) => d.inc_id),
+  });
 };
 
 // Receipt Manage Page Actions
@@ -290,6 +340,11 @@ const generateOneMemberReceipt = async (input: {
     registrationNo: string;
     locationIssued: string;
     authorizedSigner: string;
+    charityEmail: string | null;
+    charityPhone: string | null;
+    charityWebsite: string | null;
+    churchLogoUrl: string | null;
+    authorizedSignature: string | null;
   };
 }): Promise<ReceiptBulkGenerationResult<{ receiptId: string; serialNumber: number; pdfUrl: string }>> => {
   const { memberId, taxYear, charity } = input;
@@ -340,6 +395,11 @@ const generateOneMemberReceipt = async (input: {
   const charityRegNo = truncate(charity.registrationNo, 20) ?? '-';
   const locationIssued = truncate(charity.locationIssued, 60) ?? '-';
   const authorizedSigner = truncate(charity.authorizedSigner, 80) ?? '-';
+  const charityEmail = truncate(charity.charityEmail, 80);
+  const charityPhone = truncate(charity.charityPhone, 20);
+  const charityWebsite = truncate(charity.charityWebsite, 120);
+  const churchLogoUrl = truncate(charity.churchLogoUrl, 255);
+  const authorizedSignatureUrl = truncate(charity.authorizedSignature, 255);
 
   const issueDate = new Date();
   const issueDateISO = toISODate(issueDate);
@@ -369,6 +429,11 @@ const generateOneMemberReceipt = async (input: {
             postal: charityPostal,
             locationIssued,
             authorizedSigner,
+            charityEmail,
+            charityPhone,
+            charityWebsite,
+            churchLogoUrl,
+            authorizedSignatureUrl,
           },
           donor: {
             name_official: donorName,
@@ -416,8 +481,13 @@ const generateOneMemberReceipt = async (input: {
             charityProvince,
             charityPostal,
             charityRegNo,
+            charityEmail,
+            charityPhone,
+            charityWebsite,
+            churchLogoUrl,
             locationIssued,
             authorizedSigner,
+            authorizedSignatureUrl,
 
             pdfUrl,
           },
@@ -523,6 +593,11 @@ export const generateReceiptsForYearBatch = async (input: {
         registrationNo: charity.registrationNo,
         locationIssued: charity.locationIssued,
         authorizedSigner: charity.authorizedSigner,
+        charityEmail: charity.charityEmail,
+        charityPhone: charity.charityPhone,
+        charityWebsite: charity.charityWebsite,
+        churchLogoUrl: charity.churchLogoUrl,
+        authorizedSignature: charity.authorizedSignature,
       },
     });
 

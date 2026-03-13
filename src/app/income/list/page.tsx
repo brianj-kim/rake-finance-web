@@ -9,6 +9,8 @@ import Pagination from "@/app/ui/income/pagination";
 import Table from "@/app/ui/income/table";
 import { toInt } from "@/app/lib/utils";
 import DateFilters from "@/app/ui/income/date-filters";
+import { canAccess, requirePermission } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 const IncomeList = async (props: {
   searchParams?: Promise<{
@@ -19,6 +21,8 @@ const IncomeList = async (props: {
     day?: string;
   }>;
 }) => {  
+  await requirePermission(PERMISSIONS.INCOME_READ, { nextPath: '/income/list' });
+
   const searchParams = await props.searchParams;
 
   const currentYear = new Date().getFullYear();
@@ -31,10 +35,12 @@ const IncomeList = async (props: {
   const query = searchParams?.query || '';
   const currentPage = Number(searchParams?.page) || 1;
 
-  const [{ data, pagination }, incomeTypes, incomeMethods] = await Promise.all([
+  const [{ data, pagination }, incomeTypes, incomeMethods, canUpdateIncome, canDeleteIncome] = await Promise.all([
     fetchFilteredIncome(query, currentPage, selectedYear, selectedMonth, selectedDay),
     getIncomeTypes(),
     getIncomeMethods(),
+    canAccess(PERMISSIONS.INCOME_UPDATE),
+    canAccess(PERMISSIONS.INCOME_DELETE),
   ]);
 
    const totalPages = pagination.totalPages;
@@ -92,6 +98,8 @@ const IncomeList = async (props: {
         incomeList={data} 
         incomeTypes={incomeTypes}
         incomeMethods={incomeMethods}
+        canUpdateIncome={canUpdateIncome}
+        canDeleteIncome={canDeleteIncome}
       />
       <div className="mt-5 flex w-full justify-center">
         <Pagination totalPages={totalPages} />

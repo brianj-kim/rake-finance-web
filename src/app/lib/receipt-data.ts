@@ -7,6 +7,8 @@ import { formatEnglishName, truncate } from '@/app/lib/utils';
 import type { DonationRow, PagedResult, ReceiptMemberInfo, ReceiptMemberSummary } from '@/app/lib/definitions';
 
 import { RECEIPT_EXCLUDE_NAMES } from '@/app/lib/receipt-constants';
+import { canAccess } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 const RECEIPT_EXCLUDE_SET = new Set<string>(RECEIPT_EXCLUDE_NAMES);
 
@@ -21,11 +23,19 @@ const toCents = (n: unknown) => {
   return Number.isFinite(x) ? x : 0;
 };
 
+const requireReceiptReadAccess = async () => {
+  if (!(await canAccess(PERMISSIONS.RECEIPT_READ))) {
+    throw new Error('Forbidden');
+  }
+};
+
 export const getReceiptMemberMenu = async (input: {
   taxYear: number;
   page?: number;
   query?: string;
 }): Promise<PagedResult<ReceiptMemberSummary>> => {
+  await requireReceiptReadAccess();
+
   ITEMS_PER_PAGE = 30;
   const taxYear = Number(input.taxYear);
   const page = Math.max(1, Number(input.page ?? 1) || 1);
@@ -133,6 +143,8 @@ export const getReceiptMemberMenu = async (input: {
 }
 
 export async function getReceiptMemberInfo(input: { memberId: number }): Promise<ReceiptMemberInfo | null> {
+  await requireReceiptReadAccess();
+
   const memberId = Number(input.memberId);
   const m = await prisma.member.findUnique({
     where: { mbr_id: memberId },
@@ -170,6 +182,8 @@ export async function getMemberDonationsForYear(input: {
   memberId: number;
   taxYear: number;
 }): Promise<DonationRow[]> {
+  await requireReceiptReadAccess();
+
   const memberId = Number(input.memberId);
   const taxYear = Number(input.taxYear);
 
@@ -214,6 +228,8 @@ export type ReceiptStats = {
 };
 
 export const getReceiptStats = async (taxYear: number): Promise<ReceiptStats> => {
+  await requireReceiptReadAccess();
+
   const [totalMembers, generatedMembers] = await Promise.all([
     prisma.member.count({
       where: { name_kFull: { notIn: [...RECEIPT_EXCLUDE_NAMES] } },

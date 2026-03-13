@@ -1,11 +1,14 @@
 
+/* eslint-disable jsx-a11y/alt-text */
 import {
   Document,
+  Image,
   Page,
   Text,
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
+import path from 'path';
 import { formatCurrency } from "@/app/lib/utils";
 
 type Charity = {
@@ -17,6 +20,11 @@ type Charity = {
   postal: string;
   locationIssued: string;
   authorizedSigner: string;
+  charityEmail: string | null;
+  charityPhone: string | null;
+  charityWebsite: string | null;
+  churchLogoUrl: string | null;
+  authorizedSignatureUrl: string | null;
 };
 
 type Donor = {
@@ -44,6 +52,8 @@ type Props = {
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 11 },
+  logoWrap: { alignItems: 'flex-end', marginBottom: 8 },
+  logo: { maxWidth: 120, maxHeight: 60, objectFit: 'contain' },
   title: { fontSize: 16, marginBottom: 10, fontWeight: 700 },
   subtitle: { marginBottom: 10 },
   section: { marginTop: 12 },
@@ -56,16 +66,42 @@ const styles = StyleSheet.create({
   colDate: { width: "40%" },
   colAmt: { width: "60%", textAlign: "right" },
   small: { fontSize: 9, color: "#666" },
+  signatureImage: { width: 140, height: 48, objectFit: 'contain', marginBottom: 4 },
 });
+
+const resolveImageSrc = (value: string | null | undefined): string | undefined => {
+  if (!value || typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+
+  if (normalized.startsWith('data:image/')) return normalized;
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  if (normalized.startsWith('/')) {
+    const relative = normalized.replace(/^\/+/, '');
+    return path.join(process.cwd(), 'public', relative);
+  }
+
+  return undefined;
+};
 
 export type ReceiptDocumentProps = Props;
 
 const ReceiptDocument = (props: Props) => {
   const { taxYear, serialNumber, issueDateISO, charity, donor, totalCents, lines } = props;
+  const logoSrc = resolveImageSrc(charity.churchLogoUrl);
+  const signatureSrc = resolveImageSrc(charity.authorizedSignatureUrl);
+  const charityContacts = [charity.charityEmail, charity.charityPhone, charity.charityWebsite]
+    .filter((v): v is string => Boolean(v?.trim()))
+    .join(' | ');
 
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
+        {logoSrc ? (
+          <View style={styles.logoWrap}>
+            <Image src={logoSrc} style={styles.logo} />
+          </View>
+        ) : null}
         <Text style={styles.title}>Official donation receipt for income tax purposes</Text>
         <Text style={styles.subtitle}>(Canada Revenue Agency requirements)</Text>
 
@@ -79,6 +115,7 @@ const ReceiptDocument = (props: Props) => {
               </Text>
               <Text style={styles.value}>Registration number: {charity.registrationNo}</Text>
               <Text style={styles.value}>Location issued: {charity.locationIssued}</Text>
+              {charityContacts ? <Text style={styles.value}>Contact: {charityContacts}</Text> : null}
             </View>
 
             <View>
@@ -136,6 +173,7 @@ const ReceiptDocument = (props: Props) => {
 
         <View style={styles.section}>
           <Text style={styles.label}>Authorized signature</Text>
+          {signatureSrc ? <Image src={signatureSrc} style={styles.signatureImage} /> : null}
           <Text style={styles.value}>{charity.authorizedSigner}</Text>
         </View>
 

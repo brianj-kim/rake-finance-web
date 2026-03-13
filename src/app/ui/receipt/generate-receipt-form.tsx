@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { generateAnnualReceipt } from './receipt-actions';
+import { generateAnnualReceipt } from '@/app/lib/receipt-actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 

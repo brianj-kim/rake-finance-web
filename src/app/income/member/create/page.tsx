@@ -1,7 +1,11 @@
 import MemberCreateForm from '@/app/ui/income/member-create-form';
 import Link from 'next/link';
+import { requirePermission } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
-const CreateMemberPage = () => {
+const CreateMemberPage = async () => {
+  await requirePermission(PERMISSIONS.MEMBER_CREATE, { nextPath: '/income/member/create' });
+
   return (
     <main className='space-y-4'>
       <div className='flex items-center justify-between'>

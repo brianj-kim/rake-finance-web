@@ -1,7 +1,11 @@
 import { getIncomeMethods, getIncomeTypes } from "@/app/lib/data";
 import BatchIncomeForm from "@/app/ui/income/batch-income-form";
+import { requirePermission } from '@/app/lib/auth';
+import { PERMISSIONS } from '@/app/lib/rbac';
 
 const IncomeBatchPage = async () => {
+  await requirePermission(PERMISSIONS.INCOME_CREATE, { nextPath: '/income/list/create' });
+
   const incomeTypes = await getIncomeTypes();
   const incomeMethods = await getIncomeMethods();
 
