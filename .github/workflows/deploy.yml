@@ -61,7 +61,14 @@ jobs:
 
         - name: Deploy on server
           run: |
-            ssh -p "${{ secrets.PROD_SSH_PORT }}" "brian@${{ secrets.PROD_HOST }}" \
+            ssh \
+              -o BatchMode=yes \
+              -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=10 \
+              -o TCPKeepAlive=yes \
+              -p "${{ secrets.PROD_SSH_PORT }}" \
+              "brian@${{ secrets.PROD_HOST }}" \
               "set -euo pipefail; \
                APP_DIR='/home/brian/apps/rkac-finance'; \
                DEPLOY_SCRIPT='/home/brian/bin/deploy-rkac-finance.sh'; \
