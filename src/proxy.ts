@@ -10,6 +10,7 @@ const isPublicPath = (pathname: string) =>
 const loginRedirect = (req: NextRequest) =>{
   const url = req.nextUrl.clone();
   url.pathname = '/login';
+  url.search = '';
 
   const next = 
     req.nextUrl.pathname +
