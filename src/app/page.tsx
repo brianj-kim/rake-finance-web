@@ -1,4 +1,4 @@
-import { isSignedIn } from "@/app/lib/auth";
+import { canAccessAdmin, canAccessFinance, isSignedIn } from "@/app/lib/auth";
 import SignOutButton from "@/app/ui/auth/sign-out-button";
 import Link from "next/link";
 import {
@@ -20,38 +20,6 @@ type Tile = {
   badge?: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
-
-const tiles: Tile[] = [
-  {
-    title: "Income",
-    description: "Track donations, run batch entry, and review dashboards & exports.",
-    href: "/income",
-    icon: BanknotesIcon,
-  },
-  {
-    title: "Members & Households",
-    description:
-      "Member admin now. Later: households, dependents → adult members, yearly cell groups.",
-    href: "/income/member",
-    icon: UsersIcon,
-  },
-  {
-    title: "Expenditure",
-    description: "Record expenses and manage outflow reporting. (Coming soon)",
-    href: "/expenditure",
-    disabled: true,
-    badge: "Coming soon",
-    icon: CreditCardIcon,
-  },  
-  {
-    title: "App Admin",
-    description: "Manage Charity / Church info, categories used throughout the app.",
-    href: "/admin/categories",
-    disabled: true,
-    badge: "Planned",
-    icon: TagIcon,
-  },
-];
 
 const TileCard = ({ t }: { t: Tile }) => {
   const CardInner = (
@@ -108,7 +76,47 @@ const TileCard = ({ t }: { t: Tile }) => {
 };
 
 const Page = async () => {
-  const signedIn = await isSignedIn();
+  const [signedIn, canOpenAdmin, canOpenFinance] = await Promise.all([
+    isSignedIn(),
+    canAccessAdmin(),
+    canAccessFinance(),
+  ]);
+  const tiles: Tile[] = [
+    {
+      title: "Income",
+      description: "Track donations, run batch entry, and review dashboards & exports.",
+      href: "/income",
+      disabled: !canOpenFinance,
+      badge: canOpenFinance ? undefined : "Finance roles only",
+      icon: BanknotesIcon,
+    },
+    {
+      title: "Members & Households",
+      description:
+        "Member admin now. Later: households, dependents → adult members, yearly cell groups.",
+      href: "/income/member",
+      disabled: !canOpenFinance,
+      badge: canOpenFinance ? undefined : "Finance roles only",
+      icon: UsersIcon,
+    },
+    {
+      title: "Expenditure",
+      description: "Record expenses and manage outflow reporting. (Coming soon)",
+      href: "/expenditure",
+      disabled: true,
+      badge: "Coming soon",
+      icon: CreditCardIcon,
+    },
+    {
+      title: "App Admin",
+      description: "Super-only tools for charity profile, categories, and future configuration.",
+      href: "/admin",
+      disabled: !canOpenAdmin,
+      badge: canOpenAdmin ? undefined : "Super only",
+      icon: TagIcon,
+    },
+  ];
+
   return (
     <main className="min-h-screen p-6">
       <LandingPageHeader />
@@ -146,7 +154,7 @@ const Page = async () => {
         <ul className="mt-2 list-disc pl-5 text-sm text-muted-foreground space-y-1">
           <li>Households → dependents → adult member promotion</li>
           <li>Year-based cell group changes</li>
-          <li>Admin: manage categories (type/method/etc.)</li>
+          <li>Admin: manage income type and method categories</li>
           <li>Admin: church/charity profile + authorized signer</li>
           <li>Expenditure module + reporting</li>
         </ul>

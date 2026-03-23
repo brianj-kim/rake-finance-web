@@ -6,8 +6,7 @@ import SearchBox from '@/app/ui/income/search-box';
 import { formatEnglishName } from '@/app/lib/utils';
 import MemberCardActions from '@/app/ui/income/member-card-actions';
 import Pagination from '@/app/ui/income/pagination';
-import { canAccess, requirePermission } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { canAccessFinance, requireFinanceAccess } from '@/app/lib/auth';
 
 type MemberRow = Awaited<ReturnType<typeof fetchFilteredMembers>>['data'][number];
 
@@ -16,15 +15,15 @@ const formatValue = (v: string | null) => (v?.trim() ? v.trim() : '-');
 const MemberList = async (props: {
   searchParams?: Promise<{ query?: string; page?: string }>;
 }) => {
-  await requirePermission(PERMISSIONS.MEMBER_READ, { nextPath: '/income/member' });
+  await requireFinanceAccess({ nextPath: '/income/member' });
 
   const searchParams = await props.searchParams;
   const query = (searchParams?.query ?? '').trim();
   const currentPage = Number(searchParams?.page) || 1;
 
-  const [{ data: members, pagination }, canUpdateMember] = await Promise.all([
+  const [{ data: members, pagination }, canManageFinance] = await Promise.all([
     fetchFilteredMembers(query, currentPage),
-    canAccess(PERMISSIONS.MEMBER_UPDATE),
+    canAccessFinance(),
   ]);
 
   const currentYear = new Date().getFullYear();
@@ -89,7 +88,7 @@ const MemberList = async (props: {
 
             {/* Header actions */}
             <div className='flex shrink-0 gap-2'>
-              <MemberCardActions memberId={m.mbr_id} canUpdate={canUpdateMember} />
+              <MemberCardActions memberId={m.mbr_id} canUpdate={canManageFinance} />
             </div>
           </div>              
 

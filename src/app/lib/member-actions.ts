@@ -7,8 +7,7 @@ import { normalizeSpaces, normalizePostal } from '@/lib/utils';
 import { prisma } from './prisma';
 import { EditMemberDTO } from './definitions';
 
-import { canAccess } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { canAccessFinance } from '@/app/lib/auth';
 
 
 const MEMBER_LIST_PATH = '/income/member';
@@ -23,7 +22,7 @@ const isP2002 = (e: unknown) =>
 const MemberIdSchema = z.coerce.number().int().positive();
 
 export const getMemberForEdit = async (mbrId: unknown): Promise<ActionResult<{ member: EditMemberDTO }>> => {
-  if (!(await canAccess(PERMISSIONS.MEMBER_READ))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -91,7 +90,7 @@ const UpdateMemberSchema = z.object({
 });
 
 export const updateMember = async (input: unknown): Promise<ActionResult> => {
-  if (!(await canAccess(PERMISSIONS.MEMBER_UPDATE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -158,7 +157,7 @@ export const updateMember = async (input: unknown): Promise<ActionResult> => {
 };
 
 export const deleteMember = async (mbrId: number): Promise<ActionResult> => {
-  if (!(await canAccess(PERMISSIONS.MEMBER_DELETE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -200,7 +199,7 @@ const CreateMemberSchema = z.object({
 });
 
 export const createMember = async (input: unknown): Promise<ActionResult<{ memberId: number}>> => {
-  if (!(await canAccess(PERMISSIONS.MEMBER_CREATE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 

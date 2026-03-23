@@ -5,13 +5,12 @@ import { Prisma } from '@prisma/client';
 import { BatchFormValues, BatchSchema, IncomeSchema, SaveBatchIncomeResult } from '@/app/lib/definitions';
 import { nameKey } from '@/lib/utils';
 import { prisma } from '@/app/lib/prisma';
-import { canAccess } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { canAccessFinance } from '@/app/lib/auth';
 
 export const saveBatchIncome = async (
   values: BatchFormValues
 ): Promise<SaveBatchIncomeResult> => {
-  if (!(await canAccess(PERMISSIONS.INCOME_CREATE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -129,7 +128,7 @@ export const saveBatchIncome = async (
 
 
 export const updateIncome = async (id: number, formData: FormData) => {
-  if (!(await canAccess(PERMISSIONS.INCOME_UPDATE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -205,7 +204,7 @@ export const updateIncome = async (id: number, formData: FormData) => {
 }
 
 export const deleteIncome = async (incomeId: number) => {
-  if (!(await canAccess(PERMISSIONS.INCOME_DELETE))) {
+  if (!(await canAccessFinance())) {
     return {
       success: false,
       message: 'Forbidden'

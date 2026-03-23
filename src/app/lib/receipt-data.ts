@@ -7,8 +7,7 @@ import { formatEnglishName, truncate } from '@/app/lib/utils';
 import type { DonationRow, PagedResult, ReceiptMemberInfo, ReceiptMemberSummary } from '@/app/lib/definitions';
 
 import { RECEIPT_EXCLUDE_NAMES } from '@/app/lib/receipt-constants';
-import { canAccess } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { canAccessFinance } from '@/app/lib/auth';
 
 const RECEIPT_EXCLUDE_SET = new Set<string>(RECEIPT_EXCLUDE_NAMES);
 
@@ -24,7 +23,7 @@ const toCents = (n: unknown) => {
 };
 
 const requireReceiptReadAccess = async () => {
-  if (!(await canAccess(PERMISSIONS.RECEIPT_READ))) {
+  if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
   }
 };

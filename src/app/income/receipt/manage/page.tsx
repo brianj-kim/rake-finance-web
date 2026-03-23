@@ -8,8 +8,7 @@ import Pagination from '@/app/ui/income/pagination';
 
 import { fetchReceipts } from '@/app/lib/receipt-manage-data';
 import ManageReceiptsTable from '@/app/ui/receipt/manage-receipts-table';
-import { canAccess, requirePermission } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { canAccessFinance, requireFinanceAccess } from '@/app/lib/auth';
 
 
 //Bulk Generation of Receipts 
@@ -18,7 +17,7 @@ import GenerateYearReceiptsButton from '@/app/ui/receipt/generate-year-receipts-
 const ManageReceiptsPage = async (props: {
   searchParams?: Promise<{ query?: string; page?: string; year?: string }>;
 }) => {
-  await requirePermission(PERMISSIONS.RECEIPT_READ, { nextPath: '/income/receipt/manage' });
+  await requireFinanceAccess({ nextPath: '/income/receipt/manage' });
 
   const searchParams = await props.searchParams;
 
@@ -29,14 +28,13 @@ const ManageReceiptsPage = async (props: {
   const query = (searchParams?.query ?? '').trim();
   const currentPage = Number(searchParams?.page) || 1;
 
-  const [{ data, pagination }, canGenerateReceipts, canDeleteReceipts] = await Promise.all([
+  const [{ data, pagination }, canManageFinance] = await Promise.all([
     fetchReceipts({
       query,
       page: currentPage,
       taxYear: selectedYear,
     }),
-    canAccess(PERMISSIONS.RECEIPT_GENERATE),
-    canAccess(PERMISSIONS.RECEIPT_DELETE),
+    canAccessFinance(),
   ]);
 
   return (
@@ -52,7 +50,7 @@ const ManageReceiptsPage = async (props: {
         </div>
 
         <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end'>
-          {canGenerateReceipts ? <GenerateYearReceiptsButton taxYear={selectedYear} /> : null}
+          {canManageFinance ? <GenerateYearReceiptsButton taxYear={selectedYear} /> : null}
           <Link
             href='/income/receipt'
             className='inline-flex items-center justify-center rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50'
@@ -62,7 +60,7 @@ const ManageReceiptsPage = async (props: {
         </div>
       </div>
 
-      <ManageReceiptsTable rows={data} allowDelete={canDeleteReceipts} />
+      <ManageReceiptsTable rows={data} allowDelete={canManageFinance} />
 
     {pagination.totalPages > 1 && (
       <div className='mt-5 flex w-full justify-center'>

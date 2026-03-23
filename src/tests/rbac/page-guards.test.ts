@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSIONS } from '@/app/lib/rbac';
 
 const mocked = vi.hoisted(() => {
   const prisma = {
@@ -9,8 +8,9 @@ const mocked = vi.hoisted(() => {
   };
 
   return {
-    requirePermission: vi.fn(),
-    canAccess: vi.fn(),
+    requireFinanceAccess: vi.fn(),
+    requireSuperAdmin: vi.fn(),
+    canAccessFinance: vi.fn(),
     fetchFilteredIncome: vi.fn(),
     getIncomeMethods: vi.fn(),
     getIncomeTypes: vi.fn(),
@@ -25,13 +25,16 @@ const mocked = vi.hoisted(() => {
     getMemberDonationsForYear: vi.fn(),
     getReceiptMemberInfo: vi.fn(),
     fetchReceipts: vi.fn(),
+    listCategories: vi.fn(),
+    getCharityProfile: vi.fn(),
     prisma,
   };
 });
 
 vi.mock('@/app/lib/auth', () => ({
-  requirePermission: mocked.requirePermission,
-  canAccess: mocked.canAccess,
+  requireFinanceAccess: mocked.requireFinanceAccess,
+  requireSuperAdmin: mocked.requireSuperAdmin,
+  canAccessFinance: mocked.canAccessFinance,
 }));
 
 vi.mock('@/app/lib/data', () => ({
@@ -57,6 +60,11 @@ vi.mock('@/app/lib/receipt-manage-data', () => ({
   fetchReceipts: mocked.fetchReceipts,
 }));
 
+vi.mock('@/app/lib/admin-actions', () => ({
+  listCategories: mocked.listCategories,
+  getCharityProfile: mocked.getCharityProfile,
+}));
+
 vi.mock('@/app/lib/prisma', () => ({
   prisma: mocked.prisma,
 }));
@@ -73,7 +81,7 @@ type PageCase = {
   name: string;
   modulePath: string;
   run: (module: { default: (props?: unknown) => Promise<unknown> }) => Promise<unknown>;
-  permission: string;
+  guard: 'finance' | 'super';
   nextPath: string;
 };
 
@@ -82,56 +90,56 @@ const cases: PageCase[] = [
     name: 'income dashboard',
     modulePath: '@/app/income/page',
     run: (module) => module.default({ searchParams: Promise.resolve({}) }),
-    permission: PERMISSIONS.INCOME_READ,
+    guard: 'finance',
     nextPath: '/income',
   },
   {
     name: 'income list',
     modulePath: '@/app/income/list/page',
     run: (module) => module.default({ searchParams: Promise.resolve({}) }),
-    permission: PERMISSIONS.INCOME_READ,
+    guard: 'finance',
     nextPath: '/income/list',
   },
   {
     name: 'income create',
     modulePath: '@/app/income/list/create/page',
     run: (module) => module.default(),
-    permission: PERMISSIONS.INCOME_CREATE,
+    guard: 'finance',
     nextPath: '/income/list/create',
   },
   {
     name: 'income edit',
     modulePath: '@/app/income/list/[id]/edit/page',
     run: (module) => module.default({ params: { id: '1' } }),
-    permission: PERMISSIONS.INCOME_UPDATE,
+    guard: 'finance',
     nextPath: '/income/list',
   },
   {
     name: 'member list',
     modulePath: '@/app/income/member/page',
     run: (module) => module.default({ searchParams: Promise.resolve({}) }),
-    permission: PERMISSIONS.MEMBER_READ,
+    guard: 'finance',
     nextPath: '/income/member',
   },
   {
     name: 'member create',
     modulePath: '@/app/income/member/create/page',
     run: (module) => module.default(),
-    permission: PERMISSIONS.MEMBER_CREATE,
+    guard: 'finance',
     nextPath: '/income/member/create',
   },
   {
     name: 'member receipts',
     modulePath: '@/app/income/member/[id]/receipts/page',
     run: (module) => module.default({ params: Promise.resolve({ id: '1' }) }),
-    permission: PERMISSIONS.RECEIPT_READ,
+    guard: 'finance',
     nextPath: '/income/member',
   },
   {
     name: 'receipt landing',
     modulePath: '@/app/income/receipt/page',
     run: (module) => module.default({ searchParams: Promise.resolve({}) }),
-    permission: PERMISSIONS.RECEIPT_READ,
+    guard: 'finance',
     nextPath: '/income/receipt',
   },
   {
@@ -142,15 +150,36 @@ const cases: PageCase[] = [
         params: Promise.resolve({ memberId: '1' }),
         searchParams: Promise.resolve({}),
       }),
-    permission: PERMISSIONS.RECEIPT_READ,
+    guard: 'finance',
     nextPath: '/income/receipt',
   },
   {
     name: 'receipt manage',
     modulePath: '@/app/income/receipt/manage/page',
     run: (module) => module.default({ searchParams: Promise.resolve({}) }),
-    permission: PERMISSIONS.RECEIPT_READ,
+    guard: 'finance',
     nextPath: '/income/receipt/manage',
+  },
+  {
+    name: 'admin dashboard',
+    modulePath: '@/app/admin/page',
+    run: (module) => module.default(),
+    guard: 'super',
+    nextPath: '/admin',
+  },
+  {
+    name: 'admin charity',
+    modulePath: '@/app/admin/charity/page',
+    run: (module) => module.default(),
+    guard: 'super',
+    nextPath: '/admin/charity',
+  },
+  {
+    name: 'admin category',
+    modulePath: '@/app/admin/category/page',
+    run: (module) => module.default(),
+    guard: 'super',
+    nextPath: '/admin/category',
   },
 ];
 
@@ -158,8 +187,9 @@ describe('RBAC page guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mocked.requirePermission.mockResolvedValue(undefined);
-    mocked.canAccess.mockResolvedValue(true);
+    mocked.requireFinanceAccess.mockResolvedValue(undefined);
+    mocked.requireSuperAdmin.mockResolvedValue(undefined);
+    mocked.canAccessFinance.mockResolvedValue(true);
 
     mocked.fetchFilteredIncome.mockResolvedValue({ data: [], pagination: { totalPages: 1 } });
     mocked.getIncomeMethods.mockResolvedValue([]);
@@ -188,6 +218,22 @@ describe('RBAC page guards', () => {
       nameOfficial: 'Test Member',
     });
     mocked.fetchReceipts.mockResolvedValue({ data: [], pagination: { totalPages: 1 } });
+    mocked.listCategories.mockResolvedValue([]);
+    mocked.getCharityProfile.mockResolvedValue({
+      legalName: '',
+      address: '',
+      city: '',
+      province: '',
+      postal: '',
+      registrationNo: '',
+      locationIssued: '',
+      authorizedSigner: '',
+      charityEmail: '',
+      charityPhone: '',
+      charityWebsite: '',
+      churchLogoUrl: '',
+      authorizedSignature: '',
+    });
 
     mocked.prisma.income.findUnique.mockResolvedValue({
       inc_id: 1,
@@ -214,10 +260,15 @@ describe('RBAC page guards', () => {
     mocked.prisma.receipt.findMany.mockResolvedValue([]);
   });
 
-  it.each(cases)('requires correct guard for $name', async ({ modulePath, run, permission, nextPath }) => {
+  it.each(cases)('requires correct guard for $name', async ({ modulePath, run, guard, nextPath }) => {
     const pageModule = await import(modulePath);
     await run(pageModule as { default: (props?: unknown) => Promise<unknown> });
 
-    expect(mocked.requirePermission).toHaveBeenCalledWith(permission, { nextPath });
+    if (guard === 'finance') {
+      expect(mocked.requireFinanceAccess).toHaveBeenCalledWith({ nextPath });
+      return;
+    }
+
+    expect(mocked.requireSuperAdmin).toHaveBeenCalledWith({ nextPath });
   });
 });

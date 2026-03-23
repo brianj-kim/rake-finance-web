@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { canAccess, canAccessRole } from '@/app/lib/auth';
-import { PERMISSIONS, ROLE_CODES } from '@/app/lib/rbac';
+import { requireSuperAdmin } from '@/app/lib/auth';
 import { lusitana } from '@/app/ui/fonts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -8,28 +7,28 @@ type ModuleCard = {
   title: string;
   description: string;
   href: string;
-  enabled: boolean;
+  enabled?: boolean;
 };
 
 const AdminDashboardPage = async () => {
-  const [isSuperAdmin, canManageCharity, canManageCategories] = await Promise.all([
-    canAccessRole(ROLE_CODES.SUPER),
-    canAccess(PERMISSIONS.ADMIN_MANAGE_CHARITY),
-    canAccess(PERMISSIONS.ADMIN_MANAGE_CATEGORIES),
-  ]);
+  await requireSuperAdmin({ nextPath: '/admin' });
 
   const modules: ModuleCard[] = [
     {
       title: 'Charity Profile',
       description: 'Manage the official charity details used in donation receipts.',
       href: '/admin/charity',
-      enabled: isSuperAdmin && canManageCharity,
     },
     {
-      title: 'Categories',
+      title: 'Category Admin',
       description: 'Manage income type and method categories.',
-      href: '/admin/categories',
-      enabled: canManageCategories,
+      href: '/admin/category',
+    },
+    {
+      title: 'Future Admin Tools',
+      description: 'Reserved landing slots for housekeeping and broader project-wide settings.',
+      href: '/admin',
+      enabled: false,
     },
   ];
 
@@ -40,7 +39,7 @@ const AdminDashboardPage = async () => {
 
       <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
         {modules.map((module) =>
-          module.enabled ? (
+          module.enabled !== false ? (
             <Link key={module.href} href={module.href} className='block'>
               <Card className='border-gray-200 transition-colors hover:border-blue-300 hover:bg-blue-50/40'>
                 <CardHeader className='pb-2'>
@@ -56,7 +55,7 @@ const AdminDashboardPage = async () => {
                 <CardTitle className='text-base'>{module.title}</CardTitle>
                 <CardDescription>{module.description}</CardDescription>
               </CardHeader>
-              <CardContent className='text-sm text-gray-500'>No permission</CardContent>
+              <CardContent className='text-sm text-gray-500'>Planned</CardContent>
             </Card>
           )
         )}

@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from '@/app/lib/prisma';
-import { SESSION_COOKIE_NAME, verifySession } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { hasAnyRole, SESSION_COOKIE_NAME, verifySession } from '@/app/lib/auth';
+import { FINANCE_ROLE_CODES } from '@/app/lib/rbac';
 
 const toInt = (v: string | null) => {
   const n = Number(v);
@@ -24,7 +24,7 @@ export const GET = async (req: NextRequest) => {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  if (!session.permissionCodes.includes(PERMISSIONS.INCOME_READ)) {
+  if (!hasAnyRole(session, FINANCE_ROLE_CODES)) {
     return new Response('Forbidden', { status: 403 });
   }
 

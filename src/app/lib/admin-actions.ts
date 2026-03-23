@@ -5,8 +5,8 @@ import { Prisma, type AdminRole as LegacyAdminRole } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { prisma } from '@/app/lib/prisma';
-import { requirePermission, requireSuperAdmin } from '@/app/lib/auth';
-import { PERMISSIONS, ROLE_CODES } from '@/app/lib/rbac';
+import { requireSuperAdmin } from '@/app/lib/auth';
+import { ROLE_CODES } from '@/app/lib/rbac';
 import {
   ActionResult,
   AdminCreateSchema,
@@ -18,7 +18,7 @@ import {
 
 const ADMINS_PATH = '/admin/admins';
 const CHARITY_PATH = '/admin/charity';
-const CATEGORIES_PATH = '/admin/categories';
+const CATEGORY_PATH = '/admin/category';
 
 const isP2002 = (e: unknown) => 
   e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
@@ -138,7 +138,7 @@ const mapAdminRow = (row: {
 });
 
 export const listRoles = async (): Promise<RoleOption[]> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_ADMINS, { nextPath: '/admin/admins' });
+  await requireSuperAdmin({ nextPath: '/admin/admins' });
 
   return prisma.role.findMany({
     orderBy: { code: 'asc' },
@@ -147,7 +147,7 @@ export const listRoles = async (): Promise<RoleOption[]> => {
 };
 
 export const listAdmins = async (): Promise<AdminRow[]> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_ADMINS, { nextPath: '/admin/admins' });
+  await requireSuperAdmin({ nextPath: '/admin/admins' });
 
   const rows = await prisma.admin.findMany({
     orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
@@ -166,7 +166,7 @@ export const listAdmins = async (): Promise<AdminRow[]> => {
 };
 
 export const createAdmin = async (formData: FormData): Promise<ActionResult<{ id: number }>> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_ADMINS, { nextPath: '/admin/admins' });
+  await requireSuperAdmin({ nextPath: '/admin/admins' });
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = AdminCreateSchema.safeParse(raw);
@@ -202,7 +202,7 @@ export const createAdmin = async (formData: FormData): Promise<ActionResult<{ id
 };
 
 export const updateAdmin = async (formData: FormData): Promise<ActionResult> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_ADMINS, { nextPath: '/admin/admins' });
+  await requireSuperAdmin({ nextPath: '/admin/admins' });
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = AdminUpdateSchema.safeParse(raw);
@@ -241,7 +241,7 @@ export const updateAdmin = async (formData: FormData): Promise<ActionResult> => 
 };
 
 export const deleteAdmin = async (id: unknown): Promise<ActionResult> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_ADMINS, { nextPath: '/admin/admins' });
+  await requireSuperAdmin({ nextPath: '/admin/admins' });
 
   const parsed = AdminIdSchema.safeParse(id);
   if (!parsed.success) return { success: false, message: 'Invalid admin id.' };
@@ -342,7 +342,7 @@ export type CategoryAdminRow = {
 };
 
 export const listCategories = async (): Promise<CategoryAdminRow[]> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_CATEGORIES, { nextPath: CATEGORIES_PATH });
+  await requireSuperAdmin({ nextPath: CATEGORY_PATH });
 
   const rows = await prisma.category.findMany({
     orderBy: [{ range: 'asc' }, { order: 'asc' }, { ctg_id: 'asc' }],
@@ -369,7 +369,7 @@ export const listCategories = async (): Promise<CategoryAdminRow[]> => {
 };
 
 export const createCategory = async (formData: FormData): Promise<ActionResult<{ id: number }>> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_CATEGORIES, { nextPath: CATEGORIES_PATH });
+  await requireSuperAdmin({ nextPath: CATEGORY_PATH });
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = CategoryCreateSchema.safeParse(raw);
@@ -389,7 +389,7 @@ export const createCategory = async (formData: FormData): Promise<ActionResult<{
       select: { ctg_id: true },
     });
 
-    revalidatePath(CATEGORIES_PATH);
+    revalidatePath(CATEGORY_PATH);
     revalidatePath('/income/list');
     revalidatePath('/income/list/create');
     return { success: true, id: created.ctg_id };
@@ -400,7 +400,7 @@ export const createCategory = async (formData: FormData): Promise<ActionResult<{
 };
 
 export const updateCategory = async (formData: FormData): Promise<ActionResult> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_CATEGORIES, { nextPath: CATEGORIES_PATH });
+  await requireSuperAdmin({ nextPath: CATEGORY_PATH });
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = CategoryUpdateSchema.safeParse(raw);
@@ -420,7 +420,7 @@ export const updateCategory = async (formData: FormData): Promise<ActionResult> 
       },
     });
 
-    revalidatePath(CATEGORIES_PATH);
+    revalidatePath(CATEGORY_PATH);
     revalidatePath('/income/list');
     revalidatePath('/income/list/create');
     return { success: true };
@@ -431,7 +431,7 @@ export const updateCategory = async (formData: FormData): Promise<ActionResult> 
 };
 
 export const deleteCategory = async (formData: FormData): Promise<ActionResult> => {
-  await requirePermission(PERMISSIONS.ADMIN_MANAGE_CATEGORIES, { nextPath: CATEGORIES_PATH });
+  await requireSuperAdmin({ nextPath: CATEGORY_PATH });
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = CategoryDeleteSchema.safeParse(raw);
@@ -441,7 +441,7 @@ export const deleteCategory = async (formData: FormData): Promise<ActionResult> 
 
   try {
     await prisma.category.delete({ where: { ctg_id: parsed.data.id } });
-    revalidatePath(CATEGORIES_PATH);
+    revalidatePath(CATEGORY_PATH);
     revalidatePath('/income/list');
     revalidatePath('/income/list/create');
     return { success: true };

@@ -1,9 +1,8 @@
 import SideNav from "@/app/ui/admin/sidenav";
-import { requirePermission } from "@/app/lib/auth";
-import { PERMISSIONS } from "@/app/lib/rbac";
+import { requireAdminAccess } from "@/app/lib/auth";
 
 const AdminLayout = async ({ children }: { children: React.ReactNode }) => {
-  await requirePermission(PERMISSIONS.ADMIN_ACCESS, { nextPath: '/admin' });
+  await requireAdminAccess({ nextPath: '/admin' });
 
   return (
     <div className="flex h-screen flex-col md:flex-row md:overflow-hidden">

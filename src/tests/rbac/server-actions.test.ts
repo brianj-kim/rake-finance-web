@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSIONS } from '@/app/lib/rbac';
 
 const mocked = vi.hoisted(() => ({
-  canAccess: vi.fn(),
+  canAccessFinance: vi.fn(),
 }));
 
 vi.mock('@/app/lib/auth', () => ({
-  canAccess: mocked.canAccess,
+  canAccessFinance: mocked.canAccessFinance,
 }));
 
 vi.mock('next/cache', () => ({
@@ -28,7 +27,6 @@ vi.mock('@/app/lib/pdf/buffer-from-react-pdf', () => ({
 type ActionCase = {
   name: string;
   run: () => Promise<unknown>;
-  permission: string;
 };
 
 const cases: ActionCase[] = [
@@ -41,70 +39,59 @@ const cases: ActionCase[] = [
         day: 1,
         entries: [],
       }),
-    permission: PERMISSIONS.INCOME_CREATE,
   },
   {
     name: 'income updateIncome',
     run: async () => (await import('@/app/lib/data')).updateIncome({}),
-    permission: PERMISSIONS.INCOME_UPDATE,
   },
   {
     name: 'income deleteIncome',
     run: async () => (await import('@/app/lib/data')).deleteIncome(1),
-    permission: PERMISSIONS.INCOME_DELETE,
   },
   {
     name: 'member getMemberForEdit',
     run: async () => (await import('@/app/lib/member-actions')).getMemberForEdit(1),
-    permission: PERMISSIONS.MEMBER_READ,
   },
   {
     name: 'member createMember',
     run: async () => (await import('@/app/lib/member-actions')).createMember({}),
-    permission: PERMISSIONS.MEMBER_CREATE,
   },
   {
     name: 'member updateMember',
     run: async () => (await import('@/app/lib/member-actions')).updateMember({}),
-    permission: PERMISSIONS.MEMBER_UPDATE,
   },
   {
     name: 'member deleteMember',
     run: async () => (await import('@/app/lib/member-actions')).deleteMember(1),
-    permission: PERMISSIONS.MEMBER_DELETE,
   },
   {
     name: 'receipt generateAnnualReceipt',
     run: async () => (await import('@/app/lib/receipt-actions')).generateAnnualReceipt({ memberId: 1, taxYear: 2025 }),
-    permission: PERMISSIONS.RECEIPT_GENERATE,
   },
   {
     name: 'receipt generateReceiptsForYearBatch',
     run: async () => (await import('@/app/lib/receipt-actions')).generateReceiptsForYearBatch({ taxYear: 2025 }),
-    permission: PERMISSIONS.RECEIPT_GENERATE,
   },
   {
     name: 'receipt deleteReceiptAndFile',
     run: async () => (await import('@/app/lib/receipt-actions')).deleteReceiptAndFile({ receiptId: 'r1' }),
-    permission: PERMISSIONS.RECEIPT_DELETE,
   },
   {
     name: 'receipt deleteReceiptsAndFiles',
     run: async () => (await import('@/app/lib/receipt-actions')).deleteReceiptsAndFiles({ receiptIds: ['r1'] }),
-    permission: PERMISSIONS.RECEIPT_DELETE,
   },
 ];
 
 describe('RBAC server action guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocked.canAccess.mockResolvedValue(false);
+    mocked.canAccessFinance.mockResolvedValue(false);
   });
 
-  it.each(cases)('returns Forbidden when access denied: $name', async ({ run, permission }) => {
+  it.each(cases)('returns Forbidden when access denied: $name', async ({ run }) => {
     const result = (await run()) as { success: boolean; message: string };
 
     expect(result).toEqual({ success: false, message: 'Forbidden' });
-    expect(mocked.canAccess).toHaveBeenCalledWith(permission);
+    expect(mocked.canAccessFinance).toHaveBeenCalled();
   });
 });

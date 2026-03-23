@@ -1,7 +1,7 @@
 import { prisma } from "@/app/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME, verifySession } from "@/app/lib/auth";
-import { PERMISSIONS } from "@/app/lib/rbac";
+import { hasAnyRole, SESSION_COOKIE_NAME, verifySession } from "@/app/lib/auth";
+import { FINANCE_ROLE_CODES } from "@/app/lib/rbac";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -21,7 +21,7 @@ export const GET = async (
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!session.permissionCodes.includes(PERMISSIONS.INCOME_READ)) {
+  if (!hasAnyRole(session, FINANCE_ROLE_CODES)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

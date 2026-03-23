@@ -1,10 +1,9 @@
 import MemberCreateForm from '@/app/ui/income/member-create-form';
 import Link from 'next/link';
-import { requirePermission } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { requireFinanceAccess } from '@/app/lib/auth';
 
 const CreateMemberPage = async () => {
-  await requirePermission(PERMISSIONS.MEMBER_CREATE, { nextPath: '/income/member/create' });
+  await requireFinanceAccess({ nextPath: '/income/member/create' });
 
   return (
     <main className='space-y-4'>

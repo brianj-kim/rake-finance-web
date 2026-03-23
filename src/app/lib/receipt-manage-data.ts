@@ -4,8 +4,7 @@ import { prisma } from '@/app/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { ReceiptListResult } from './definitions';
 import { RECEIPT_EXCLUDE_NAMES } from '@/app/lib/receipt-constants';
-import { canAccess } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { canAccessFinance } from '@/app/lib/auth';
 
 const ITEMS_PER_PAGE = 30;
 
@@ -15,7 +14,7 @@ export const fetchReceipts = async (input: {
   page: number;
   taxYear: number;
 }): Promise<ReceiptListResult> => {
-  if (!(await canAccess(PERMISSIONS.RECEIPT_READ))) {
+  if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
   }
 

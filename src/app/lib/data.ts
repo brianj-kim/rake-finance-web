@@ -8,9 +8,7 @@ import { z } from 'zod';
 import { normalizeName } from '@/lib/utils';
 import { prisma } from './prisma';
 
-import { canAccess } from '@/app/lib/auth';
-import type { PermissionCode } from '@/app/lib/rbac';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { canAccessFinance } from '@/app/lib/auth';
 
 const ITEMS_PER_PAGE = 30 as const;
 const INCOME_LIST_PATH = '/income/list';
@@ -21,11 +19,6 @@ type ActionResult<T extends object = object> = ActionOK<T> | ActionFail;
 
 const isP2002 = (e: unknown) => 
   e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
-
-const canAccessAny = async (permissions: readonly PermissionCode[]) => {
-  const accessList = await Promise.all(permissions.map((p) => canAccess(p)));
-  return accessList.some(Boolean);
-};
 
 
 const buildIncomeListWhere = (args: {
@@ -50,7 +43,7 @@ const buildIncomeListWhere = (args: {
 };
 
 export const fetchCardData = async (year: number): Promise<IncomeSummary> => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
 		throw new Error('Forbidden');
 	}
 	// Categories (range='inc')
@@ -80,7 +73,7 @@ export const fetchCardData = async (year: number): Promise<IncomeSummary> => {
 };
 
 export const fetchLatestIncome = async (year: number) => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
 			throw new Error('Forbidden');
 	}
 	return prisma.incomeList.findMany({
@@ -97,7 +90,7 @@ export const fetchFilteredIncome = async (
     selectedMonth?: number,
     selectedDay?: number
 ) => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 
@@ -133,7 +126,7 @@ export const fetchFilteredIncome = async (
 };
 
 export const getMonthDayOptions = async (year: number) => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 	const rows = await prisma.incomeList.findMany({
@@ -149,7 +142,7 @@ export const getMonthDayOptions = async (year: number) => {
 };
 
 export const getDays = async (year: number, month: number) => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 
@@ -182,22 +175,14 @@ const getCategoriesByRange = async (range: 'inc' | 'imd'): Promise<CategoryDTO[]
 };
 
 export const getIncomeTypes = async (): Promise<CategoryDTO[]> => {
-	if (!(await canAccessAny([
-    PERMISSIONS.INCOME_READ,
-    PERMISSIONS.INCOME_CREATE,
-    PERMISSIONS.INCOME_UPDATE,
-  ]))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 
 	return getCategoriesByRange('inc');
 }
 export const getIncomeMethods = async (): Promise<CategoryDTO[]> => {
-	if (!(await canAccessAny([
-    PERMISSIONS.INCOME_READ,
-    PERMISSIONS.INCOME_CREATE,
-    PERMISSIONS.INCOME_UPDATE,
-  ]))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 
@@ -205,7 +190,7 @@ export const getIncomeMethods = async (): Promise<CategoryDTO[]> => {
 }
 
 export const saveBatchIncome = async (data: BatchIncomeDTO): Promise<ActionResult<{ count: number }>> => {
-    if (!(await canAccess(PERMISSIONS.INCOME_CREATE))) {
+    if (!(await canAccessFinance())) {
         return { success: false, message: 'Forbidden' }
     }
 
@@ -264,7 +249,7 @@ const UpdateIncomeSchema = z.object({
 });
 
 export const updateIncome = async (input: unknown): Promise<ActionResult<{ memberId: number }>> => {
-    if (!(await canAccess(PERMISSIONS.INCOME_UPDATE))) {
+    if (!(await canAccessFinance())) {
         return { success: false, message: 'Forbidden' };
     }
 
@@ -336,7 +321,7 @@ export const updateIncome = async (input: unknown): Promise<ActionResult<{ membe
 
 // Income Deletion - server action
 export const deleteIncome = async (incId: number): Promise<ActionResult> => {
-    if (!(await canAccess(PERMISSIONS.INCOME_DELETE))) {
+    if (!(await canAccessFinance())) {
         return { success: false, message: 'Forbidden' };
     }
 
@@ -354,7 +339,7 @@ export const deleteIncome = async (incId: number): Promise<ActionResult> => {
 const MEMBERS_PER_PAGE = 24 as const;
 
 export const fetchFilteredMembers = async (query: string, currentPage: number) => {
-	if (!(await canAccess(PERMISSIONS.MEMBER_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 
@@ -415,7 +400,7 @@ export type IncomeKpi = {
 };
 
 export const getIncomeKpis = async (year: number): Promise<IncomeKpi> => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 
@@ -453,7 +438,7 @@ export type MonthlyTotal = { month: number; totalCents: number; };
 
 // Monthly
 export const getMonthlyTotals = async (year: number): Promise<MonthlyTotal[]> => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 
@@ -476,7 +461,7 @@ export const getMonthlyTotals = async (year: number): Promise<MonthlyTotal[]> =>
 export type QuarterlyTotal = { quarter: number; totalCents: number; };
 
 export const getQuarterlyTotals = async (year: number): Promise<QuarterlyTotal[]> => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 	const rows = await prisma.income.groupBy({
@@ -494,7 +479,7 @@ export const getQuarterlyTotals = async (year: number): Promise<QuarterlyTotal[]
 export type CategoryBreakDownRow = { id: number; name: string; totalCents: number };
 
 export const getTypeBreakdown = async (year: number): Promise<CategoryBreakDownRow[]> => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
   
@@ -529,7 +514,7 @@ const rows = await prisma.income.groupBy({
 
 // Breaktdown by method (헌금 납입 방법)
 export const getMethodBreakdown = async (year: number): Promise<CategoryBreakDownRow[]> => {
-	if (!(await canAccess(PERMISSIONS.INCOME_READ))) {
+	if (!(await canAccessFinance())) {
     throw new Error('Forbidden');
 	}
 

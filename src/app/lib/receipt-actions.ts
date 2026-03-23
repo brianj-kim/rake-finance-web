@@ -13,8 +13,7 @@ import { formatEnglishName, truncate } from '@/app/lib/utils';
 import { bufferFromReactPdf } from '@/app/lib/pdf/buffer-from-react-pdf';
 import type { ActionFail, ActionOK, ActionResult } from '@/app/lib/definitions';
 
-import { canAccess } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { canAccessFinance } from '@/app/lib/auth';
 
 const toISODate = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -30,7 +29,7 @@ export const generateReceiptForSelected = async (input: {
   taxYear: number;
   incomeIds: number[];
 }): Promise<ActionResult<{ receiptId: string; serialNumber: number; pdfUrl: string }>> => {
-  if (!(await canAccess(PERMISSIONS.RECEIPT_GENERATE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -222,7 +221,7 @@ export const generateAnnualReceipt = async (input: {
   memberId: number;
   taxYear: number;
 }): Promise<ActionResult<{ receiptId: string; serialNumber: number; pdfUrl: string }>> => {
-  if (!(await canAccess(PERMISSIONS.RECEIPT_GENERATE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -271,7 +270,7 @@ const safePublicFilePathFromUrl = (pdfUrl: string | null | undefined) => {
 export const deleteReceiptAndFile = async (input: {
   receiptId: string;
 }): Promise<DeleteReceiptResult> => {
-  if (!(await canAccess(PERMISSIONS.RECEIPT_DELETE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -523,7 +522,7 @@ export const generateReceiptsForYearBatch = async (input: {
     failures: Array<{ memberId: number; message: string }>;
   }>
 > => {
-  if (!(await canAccess(PERMISSIONS.RECEIPT_GENERATE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
@@ -626,7 +625,7 @@ export const generateReceiptsForYearBatch = async (input: {
 export const deleteReceiptsAndFiles = async (input: {
   receiptIds: string[];
 }): Promise<ActionResult<{ deleted: number }>> => {
-  if (!(await canAccess(PERMISSIONS.RECEIPT_DELETE))) {
+  if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 

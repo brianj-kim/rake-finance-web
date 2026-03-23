@@ -7,8 +7,7 @@ import Pagination from '@/app/ui/income/pagination';
 import YearSelect from '@/app/ui/income/year-select';
 import SearchBox from '@/app/ui/income/search-box';
 import ReceiptMemberGrid from '@/app/ui/receipt/receipt-member-grid';
-import { requirePermission } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { requireFinanceAccess } from '@/app/lib/auth';
 
 
 const ReceiptMainPage = async (props: {
@@ -18,7 +17,7 @@ const ReceiptMainPage = async (props: {
     year?: string;
   }>;
 }) => {
-  await requirePermission(PERMISSIONS.RECEIPT_READ, { nextPath: '/income/receipt' });
+  await requireFinanceAccess({ nextPath: '/income/receipt' });
 
   const searchParams = await props.searchParams;
 

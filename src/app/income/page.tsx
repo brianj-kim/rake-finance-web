@@ -14,11 +14,10 @@ import KpiCards from "@/app/ui/income/kpi-cards";
 import ReceiptStatsCard from "@/app/ui/income/receipt-stats";
 import MonthlyQuarterlyStats from "@/app/ui/income/monthly-quarterly-stats";
 import BreakdownStats from "@/app/ui/income/breakdown-stats";
-import { requirePermission } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { requireFinanceAccess } from '@/app/lib/auth';
 
 const IncomeDash = async ({ searchParams }: { searchParams: Promise<{ year?: string }> }) => {
-    await requirePermission(PERMISSIONS.INCOME_READ, { nextPath: '/income' });
+    await requireFinanceAccess({ nextPath: '/income' });
 
     const params = await searchParams;
     const currentYear = new Date().getFullYear();

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { verifySession } from '@/app/lib/auth';
-import { PERMISSIONS } from '@/app/lib/rbac';
+import { hasAnyRole, verifySession } from '@/app/lib/auth';
+import { ADMIN_ROLE_CODES } from '@/app/lib/rbac';
 
 const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout'];
 
@@ -36,12 +36,9 @@ export const proxy = async (req: NextRequest) => {
   try {
     const session = await verifySession(token);
 
-    if (
-      pathname.startsWith('/admin') &&
-      !session.permissionCodes.includes(PERMISSIONS.ADMIN_ACCESS)
-    ) {
+    if (pathname.startsWith('/admin') && !hasAnyRole(session, ADMIN_ROLE_CODES)) {
       const url = req.nextUrl.clone();
-      url.pathname = '/income';
+      url.pathname = '/';
       url.search = '';
 
       return NextResponse.redirect(url);

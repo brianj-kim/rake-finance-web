@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import {
-  UserGroupIcon,
   BuildingOffice2Icon,
   TagIcon,
   Squares2X2Icon
@@ -19,9 +18,8 @@ type NavItem = {
 
 const items: NavItem[] = [
   { label: "Admin Dashboard", href: "/admin", activePrefixes: ["/admin"], icon: Squares2X2Icon },
-  { label: "Admin Accounts", href: "/admin/admins", activePrefixes: ["/admin/admins"], icon: UserGroupIcon },
   { label: "Charity Profile", href: "/admin/charity", activePrefixes: ["/admin/charity"], icon: BuildingOffice2Icon },
-  { label: "Categories", href: "/admin/categories", activePrefixes: ["/admin/categories"], icon: TagIcon },
+  { label: "Category Admin", href: "/admin/category", activePrefixes: ["/admin/category"], icon: TagIcon },
 ]
 
 const normalize = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
