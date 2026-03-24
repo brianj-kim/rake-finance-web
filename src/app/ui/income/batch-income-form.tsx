@@ -6,8 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import  { ArrowDownCircleIcon, ArrowsUpDownIcon, ArrowUturnRightIcon, ReceiptRefundIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
 
-import { lusitana } from "../fonts";
-
 import BatchTotalSummary from "./entries-stat";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -201,12 +199,10 @@ const BatchIncomeForm = ({ incomeTypes, incomeMethods, defaultRowCount = 20 }: P
     name: "entries"
   });
 
-  const [year, month, day] = useWatch({
+  const [year] = useWatch({
     control,
     name: ["year", "month", "day"]
   });
-
-  const dateLabel = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
@@ -241,10 +237,9 @@ const BatchIncomeForm = ({ incomeTypes, incomeMethods, defaultRowCount = 20 }: P
 
   return (
     <Form {...form}>
-      <h1 className={`${lusitana.className} mb-6 text-xl md:text-2xl`}>Create Income on {dateLabel}</h1>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">      
         {/* Shared date */}
-        <div className='sticky top-0 z-40 border-b bg-white/90 backdrop-blur-sm py-2'>       
+        <div className='sticky top-0 z-20 py-1'>       
           <BatchTotalSummary 
             control={control}
             incomeTypes={incomeTypes}
@@ -267,24 +262,24 @@ const BatchIncomeForm = ({ incomeTypes, incomeMethods, defaultRowCount = 20 }: P
               type='button'
               onClick={() => replace(makeDefaultEntries(1))}
               disabled={formState.isSubmitting || fields.length === 1}
-              className='inline-flex shrink-0 items-center gap-2 whitespace-nowrap bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-700/60'
+              className='inline-flex shrink-0 items-center gap-2 whitespace-nowrap'
             >
               <ReceiptRefundIcon className='h-5 w-5' /> Clear to single row
             </Button>  
         </div>     
 
         {/* Rows */}
-        <div className='w-full overflow-x-auto rounded-md border'>
+        <div className='panel w-full overflow-hidden'>
           <Table>
-            <TableHeader className="sticky top-0 bg-gray-100">
-              <TableRow className="hover:bg-gray-100">
-                <TableHead className="w-5 font-semibold text-gray-700">#</TableHead>
-                <TableHead className="w-32 font-semibold text-gray-700">Name</TableHead>
-                <TableHead className="w-36 font-semibold text-gray-700">Amount (in cents)</TableHead>
-                <TableHead className="w-54 font-semibold text-gray-700">Type</TableHead>
-                <TableHead className="w-52 font-semibold text-gray-700">Method</TableHead>
-                <TableHead className="w-min-100 font-semibold text-gray-700">Note</TableHead>
-                <TableHead className="w-25 font-semibold text-gray-700">Actions</TableHead>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-5">#</TableHead>
+                <TableHead className="w-32">Name</TableHead>
+                <TableHead className="w-36">Amount (in cents)</TableHead>
+                <TableHead className="w-54">Type</TableHead>
+                <TableHead className="w-52">Method</TableHead>
+                <TableHead className="w-min-100">Note</TableHead>
+                <TableHead className="w-25">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -363,7 +358,7 @@ const BatchIncomeForm = ({ incomeTypes, incomeMethods, defaultRowCount = 20 }: P
           <Button 
             type="submit" 
             disabled={formState.isSubmitting}
-            className='inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700'             
+            className='inline-flex items-center gap-2'             
           >
             <ArrowDownCircleIcon />
             {formState.isSubmitting ? "Saving..." : "Save Entries"}

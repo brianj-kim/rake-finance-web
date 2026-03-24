@@ -28,24 +28,24 @@ const IncomeTable = async ({
   return (
     <div className='mt-6 flow-root'>
       <div className='w-full align-middle'>
-        <div className='rounded-md border border-gray-200 bg-white'>
+        <div className='panel overflow-hidden'>
           
           {/* Mobile cards */}
-          <div className='divide-y md:hidden'>
+          <div className='divide-y divide-white/8 md:hidden'>
             {incomeList?.map((income) => (
-              <div key={income.inc_id} className='p-4'>
+              <div key={income.inc_id} className='p-5'>
                 <div className='flex items-start justify-between gap-3'>
                   <div className='min-w-0'>
-                    <div className='truncate font-medium text-gray-900'>
+                    <div className='truncate font-medium text-foreground'>
                       {income.name ?? '-'}
                     </div>
-                    <div className='nt-1 text-sm test-gray-500'>
+                    <div className='mt-1 text-sm text-muted-foreground'>
                       {formatDate(income.year, income.month, income.day)}
                     </div>
                   </div>
 
                   <div className='shrink-0'>
-                    <div className='text-right text-bases font-semibold text-gray-900'>
+                    <div className='text-right text-base font-semibold text-foreground'>
                       {formatCurrency(income.amount ?? 0)}
                     </div>
                   </div>
@@ -53,17 +53,17 @@ const IncomeTable = async ({
 
                 <div className='mt-3 grid grid-cols-2 gap-3 text-sm'>
                   <div>
-                    <div className='text-gray-500'>Type</div>
-                    <div className='truncate text-gray-900'>{income.type ?? '-'}</div>
+                    <div className='text-muted-foreground'>Type</div>
+                    <div className='truncate text-foreground'>{income.type ?? '-'}</div>
                   </div>
                   <div>
-                    <div className='text-gray-500'>Method</div>
-                    <div className='truncate text-gray-900'>{income.method ?? '-'}</div>
+                    <div className='text-muted-foreground'>Method</div>
+                    <div className='truncate text-foreground'>{income.method ?? '-'}</div>
                   </div>
 
                   <div className='col-span-2'>
-                    <div className='text-gray-500'>Note</div>
-                    <div className='line-clamp ㅅㄷㅌㅅ-ㅎㄱ묘-900'>
+                    <div className='text-muted-foreground'>Note</div>
+                    <div className='line-clamp-2 text-foreground'>
                       {income.notes?.trim() ? income.notes : '-'}
                     </div>
                   </div>
@@ -82,43 +82,43 @@ const IncomeTable = async ({
             ))}
 
             {incomeList?.length === 0 && (
-              <div className='p-4 text-sm text-gray-600'>No income records found.</div>
+              <div className='p-5 text-sm text-muted-foreground'>No income records found.</div>
             )}
           </div>
 
           {/* Desktop table */}
           <div className='hidden md:block'>
-            <div className='oveflow-x-auto'>
-              <table className='w-full table-auto text-gray-900'>
-                <thead className='bg-gray-50 text-left text-sm font-medium text-gray-700'>
+            <div className='overflow-x-auto'>
+              <table className='w-full table-auto text-foreground'>
+                <thead className='bg-muted text-left text-sm font-medium text-muted-foreground'>
                   <tr className='[&>th]:whitespace-nowrap'>
                     <th scope='col' className='px-4 py-3 sm:pl-6'>Name</th>
                     <th scope='col' className='px-3 py-3'>Date</th>
                     <th scope='col' className='px-3 py-3 text-right'>Amount</th>
                     <th scope='col' className='px-3 py-3'>Type</th>
                     <th scope='col' className='px-3 py-3'>Method</th>
-                    <th scope='col' className='px-3 py-3t'>Note</th>
+                    <th scope='col' className='px-3 py-3'>Note</th>
                     <th scope='col' className='px-3 py-3 text-right sm:pr-6'>Actions</th>
                   </tr>
                 </thead>
 
-                <tbody className='divide-y divide-gray-100 bg-white text-sm'>
+                <tbody className='divide-y divide-white/8 text-sm'>
                   {incomeList?.map((income) => (
-                    <tr key={income.inc_id} className='hover:bg-gray-50/50'>
+                    <tr key={income.inc_id}>
                       <td className='max-w-55 truncate px-4 py-3 sm:pl-6'>{income.name ?? '-'}</td>
-                      <td className='whitespace-nowrap px-3 py-3 text-gray-700'>
+                      <td className='whitespace-nowrap px-3 py-3 text-muted-foreground'>
                         {formatDate(income.year, income.month, income.day)}
                       </td>
                       <td className='whitespace-nowrap px-3 py-3 text-right font-medium'>
                         {formatCurrency(income.amount ?? 0)}
                       </td>
-                      <td className='max-w-35 truncate px-3 py-3 text-gray-700'>
+                      <td className='max-w-35 truncate px-3 py-3 text-muted-foreground'>
                         {income.type ?? '-'}
                       </td>
-                      <td className='max-w-35 truncate px-3 py-3 text-gray-700'>
+                      <td className='max-w-35 truncate px-3 py-3 text-muted-foreground'>
                         {income.method ?? '-'}
                       </td>
-                      <td className='min-w-70 px-3 py-3 text-gray-700'>
+                      <td className='min-w-70 px-3 py-3 text-muted-foreground'>
                         <div className='max-w-130 truncate'>
                           {income.notes?.trim() ? income.notes : '-'}
                         </div>
@@ -139,7 +139,7 @@ const IncomeTable = async ({
 
                   {incomeList?.length === 0 && (
                     <tr>
-                      <td colSpan={7} className='p-4 text-sm text-gray-600 rounded-b-lg'>
+                      <td colSpan={7} className='p-5 text-sm text-muted-foreground'>
                         No income records found.
                       </td>
                     </tr>

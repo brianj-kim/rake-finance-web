@@ -9,10 +9,10 @@ type Props = {
 };
 
 const StatCard = ({ title, value, sub }: { title: string; value: string; sub?: string }) => (
-  <div className='rounded-md border border-gray-200 bg-white p-4 shadow-sm'>
-    <div className='text-sm text-muted-foreground'>{title}</div>
-    <div className='mt-2 text-2xl font-semibold'>{value}</div>
-    {sub ? <div className='mt-1 text-xs text-muted-foreground'>{sub}</div> : null}
+  <div className='stat-tile'>
+    <div className='text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground'>{title}</div>
+    <div className='mt-4 text-3xl font-semibold text-foreground'>{value}</div>
+    {sub ? <div className='mt-2 text-sm text-muted-foreground'>{sub}</div> : null}
   </div>
 );
 

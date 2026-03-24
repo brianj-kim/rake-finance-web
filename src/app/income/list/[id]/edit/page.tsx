@@ -3,16 +3,18 @@ import { prisma } from '@/app/lib/prisma';
 import EditIncomeForm from '@/app/ui/income/edit-form';
 import { notFound } from 'next/navigation';
 import { requireFinanceAccess } from '@/app/lib/auth';
+import PageIntro from '@/app/ui/page-intro';
 
 const EditIncomePage = async ({
   params,
 }: {
-  params: { id: string };
-  searchParams?: { returnYear?: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ returnYear?: string }>;
 }) => {  
   await requireFinanceAccess({ nextPath: '/income/list' });
 
-  const incomeId = Number(params.id);
+  const { id } = await params;
+  const incomeId = Number(id);
   if (!Number.isInteger(incomeId) || incomeId <= 0) notFound();
 
   const [income, incomeTypes, incomeMethods] = await Promise.all([
@@ -27,7 +29,11 @@ const EditIncomePage = async ({
   if (!income) notFound();
 
   return (
-    <main className='w-full'>
+    <main className='space-y-6'>
+      <PageIntro
+        title="Edit Income"
+        description="Update the selected donation record, then return to the filtered list view."
+      />
       <EditIncomeForm
         income={{
           inc_id: income.inc_id,
@@ -42,6 +48,7 @@ const EditIncomePage = async ({
         }}
         incomeTypes={incomeTypes}
         incomeMethods={incomeMethods}
+        showHeader={false}
       />
     </main>
   );

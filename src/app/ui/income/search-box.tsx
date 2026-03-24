@@ -66,25 +66,26 @@ const SearchBox = ({
 
   return (
     <form
-      className='flex w-full items-center gap-2'
+      className='flex w-full flex-col gap-2 sm:flex-row sm:items-center'
       onSubmit={(e) => {
         e.preventDefault();
         applySearch(value);
       }}
     >
       <Input 
-        className='flex-1 min-w-80'
+        className='min-w-0 flex-1 sm:min-w-[280px]'
         placeholder={placeholder}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />
-      <Button type='submit' variant='outline'>
+      <Button type='submit' variant='outline' className='sm:self-stretch'>
         Search
       </Button>
 
       <Button 
         type='button'
         variant='secondary'
+        className='sm:self-stretch'
         onClick={clearAllToSelectedYear}
         disabled={!hasAnythingToClear}
       >

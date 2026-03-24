@@ -102,7 +102,7 @@ const DonationSelector = (props: {
             {allSelected ? 'Deselect all' : 'Select all'}
           </Button>
           {canGenerateReceipt ? (
-            <Button type="button" onClick={onGenerate} disabled={pending} className='bg-blue-600 border-blue-600'>
+            <Button type="button" onClick={onGenerate} disabled={pending}>
               {pending ? 'Generating…' : 'Generate receipt'}
             </Button>
           ) : null}
@@ -111,7 +111,7 @@ const DonationSelector = (props: {
 
       <Separator />
 
-      <div className='rounded-md border overflow-hidden'>
+      <div className='panel overflow-hidden'>
         <Table>
           <TableHeader>
             <TableRow>
@@ -137,7 +137,7 @@ const DonationSelector = (props: {
                     <Checkbox 
                       checked={checked} 
                       onCheckedChange={() => onToggleOne(d.incId)} 
-                      className='data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white'
+                      className='data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-white'
                     />
                   </TableCell>
                   <TableCell>{d.dateISO}</TableCell>

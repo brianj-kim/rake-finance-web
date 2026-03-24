@@ -1,7 +1,7 @@
 import { getCharityProfile } from '@/app/lib/admin-actions';
 import { requireSuperAdmin } from '@/app/lib/auth';
 import CharityProfileForm from '@/app/ui/admin/charity-profile-form';
-import { lusitana } from '@/app/ui/fonts';
+import PageIntro from '@/app/ui/page-intro';
 
 const CharityAdminPage = async () => {
   await requireSuperAdmin({ nextPath: '/admin/charity' });
@@ -9,11 +9,11 @@ const CharityAdminPage = async () => {
   const profile = await getCharityProfile();
 
   return (
-    <main>
-      <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Charity Profile</h1>
-      <p className='mb-6 text-sm text-gray-600'>
-        Super admin only. These values are copied into generated donation receipts.
-      </p>
+    <main className="space-y-6">
+      <PageIntro        
+        title="Charity Profile"
+        description="These values feed directly into generated donation receipts, so keep them accurate and current."
+      />
 
       <CharityProfileForm
         initialValues={{

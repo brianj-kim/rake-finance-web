@@ -1,58 +1,62 @@
-import Link from "next/link";
-import NavLinks from "@/app/ui/income/nav-links";
-import SignOutButton from "@/app/ui/auth/sign-out-button";
+import Link from 'next/link';
+import NavLinks from '@/app/ui/income/nav-links';
+import SignOutButton from '@/app/ui/auth/sign-out-button';
+import { getSession } from '@/app/lib/auth';
+import { getInitials } from '@/app/lib/utils';
 
-const SideNav = () => {
+const formatRole = (roleCode: string) => {
+  switch (roleCode) {
+    case 'super':
+      return 'Super Admin';
+    case 'treasurer':
+      return 'Treasurer';
+    case 'pastor':
+      return 'Pastor';
+    default:
+      return 'Member';
+  }
+};
+
+
+const SideNav = async () => {
+  const session = await getSession();
+  const accountLabel = session?.name?.trim() || session?.email || 'finance@rkac';
+  const roleLabel = session?.roleCodes?.length
+    ? session.roleCodes.map(formatRole).join(', ')
+    : 'Finance User';
+  const avatarLabel = getInitials(accountLabel);
+
   return (
-    <aside className="flex h-full flex-col px-3 py-4 md:px-2">
-      {/* Brand / Module Header */}
-      <Link
-        href="/"
-        className="mb-3 block rounded-md border border-gray-200 bg-white shadow-sm
-                   focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-      >
-        <div className="rounded-md bg-blue-600 px-4 py-3 border-b border-gray-200">
-          <div className="text-lg font-semibold text-white truncate">
-            RKAC Finance
-          </div>
-          <div className="text-white text-base truncate">
-            / Income
-          </div>
-        </div>
-      </Link>
+    <aside className="flex h-full flex-col border-r border-slate-200 bg-transparent px-6 py-6 md:px-7">      
+      <div className="space-y-1">
+        <Link
+          href="/income"
+          className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        >
+          <div className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">Income</div>
+        </Link>
 
-      {/* Navigation block */}
-      <div className="flex grow flex-col gap-3">
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
-            <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-              Navigation
+        <Link
+          href="/"
+          className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        >
+          <div className="text-sm text-slate-500">RKAC Finance</div>
+          </Link>
+      </div>
+
+      <div className="flex grow flex-col pt-12">
+        <NavLinks />
+
+        <div className="mt-auto border-t border-slate-200 pt-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+              {avatarLabel}
             </div>
-          </div>
-
-          <div className="px-2 py-2">
-            <NavLinks />
-          </div>
-        </div>
-
-        {/* Spacer (keeps layout similar to your current side layout) */}
-        <div className="hidden grow rounded-lg border border-gray-200 bg-gray-50 md:block" />
-
-        {/* Sign out block */}
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
-            <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-              Account
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-slate-900">{accountLabel}</div>
+              <div className="mt-1 text-sm text-slate-500">{roleLabel}</div>
             </div>
-          </div>
-
-          <div className="px-2 py-2">
-            <SignOutButton
-              className="w-full inline-flex items-center md:justify-start gap-2
-                         rounded-md bg-gray-50 px-3 py-2 text-sm font-medium
-                         hover:bg-gray-100 hover:text-blue-700
-                         disabled:opacity-60"
-            />
+            <SignOutButton iconOnly label="Sign out" className="shrink-0" />
           </div>
         </div>
       </div>
@@ -61,32 +65,3 @@ const SideNav = () => {
 };
 
 export default SideNav;
-
-
-// import Link from 'next/link';
-// import NavLinks from '@/app/ui/income/nav-links';
-// import SignOutButton from '@/app/ui/auth/sign-out-button';
-
-// const SideNav = () => {
-//     return (
-//         <div className="flex h-full flex-col px-3 py-4 md:px-2">
-//             <Link
-//                 className="mb-2 flex h-10 items-end justify-start rounded-md bg-blue-600 p-4 md:h-20"
-//                 href="/"
-//             >
-//                 <div className="w-32 text-white md:w-40">
-//                 RKAC-Finance / Income
-//                 </div>
-//             </Link>
-
-//             <div className="flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-2">
-//                 <NavLinks />
-//                 <div className="hidden h-auto w-full grow rounded-md bg-gray-50 md:block"></div>
-//                 <SignOutButton className='md:justify-start' />
-//             </div>
-            
-//         </div>
-//     );
-// }
-
-// export default SideNav;

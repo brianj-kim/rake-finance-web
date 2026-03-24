@@ -121,9 +121,9 @@ const DateFilters = ({
   };
 
   return (
-    <div className='flex items-center gap-2'>
+    <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center'>
       <Select value={String(selectedYear)} onValueChange={onYearChange}>
-        <SelectTrigger className='w-25'>
+        <SelectTrigger className='w-full sm:w-[130px]'>
           <SelectValue placeholder='Year' />
         </SelectTrigger>
         <SelectContent>
@@ -136,7 +136,7 @@ const DateFilters = ({
       </Select>
 
       <Select value={String(selectedMonth)} onValueChange={onMonthChange}>
-        <SelectTrigger className='w-30'>
+        <SelectTrigger className='w-full sm:w-[170px]'>
           <SelectValue placeholder='Month' />
         </SelectTrigger>
         <SelectContent>
@@ -153,7 +153,7 @@ const DateFilters = ({
         onValueChange={onDayChange}
         disabled={selectedMonth === 0}
       >
-        <SelectTrigger className='w-30'>
+        <SelectTrigger className='w-full sm:w-[150px]'>
           <SelectValue placeholder='Day' />
         </SelectTrigger>
         <SelectContent>

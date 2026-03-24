@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { lusitana } from '@/app/ui/fonts';
 import { toInt } from '@/app/lib/utils';
 
 import { getMemberDonationsForYear, getReceiptMemberInfo } from '@/app/lib/receipt-data';
 import DonationSelector from '@/app/ui/receipt/donation-selector';
 import MemberDetailActions from '@/app/ui/receipt/member-detail-actions';
 import { canAccessFinance, requireFinanceAccess } from '@/app/lib/auth';
+import PageIntro from '@/app/ui/page-intro';
+import { buttonVariants } from '@/components/ui/button';
 
 export const runtime = 'nodejs';
 
@@ -31,46 +32,37 @@ const ReceiptMemberPage = async (props: {
   if (!member) {
     return (
       <main>
-        <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>
-          Donation Review (Selector)
-        </h1>
-        <div className='text-sm text-gray-600'>Member not found.</div>
+        <PageIntro
+          title="Donation Review"
+          description="The requested member record could not be found."
+        />
       </main>
     );
   }
 
   return (
-    <main>
-      <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>
-        Donation Review (Selector)
-      </h1>
-
-      <div className='flex justify-between mb-4'>
-        <div className='flex space-x-2'>
-          <Link 
-            href={`/income/receipt?year=${selectedYear}`}
-            className='rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50'
-          >
-            Back
-          </Link>
-        </div>
-
-        <div>
-          <Link 
-            href={`/income/receipt/${memberId}?year=${selectedYear}`}
-            className='rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50'
-          >
-            Refresh
-          </Link>
-        </div>
-      </div>
+    <main className="space-y-6">
+      <PageIntro
+        title="Donation Review"
+        description="Choose the included donations for this member, then generate a clean annual receipt."
+        actions={
+          <>
+            <Link href={`/income/receipt?year=${selectedYear}`} className={buttonVariants({ variant: 'outline' })}>
+              Back
+            </Link>
+            <Link href={`/income/receipt/${memberId}?year=${selectedYear}`} className={buttonVariants({ variant: 'secondary' })}>
+              Refresh
+            </Link>
+          </>
+        }
+      />
 
       {/* Member Details */}
-      <div className='mb-4 rounded-md border border-gray-200 p-4'>
-        <div className='flex items-start justify-between gap-3 mb-4'>
+      <div className='panel-muted p-5'>
+        <div className='mb-4 flex items-start justify-between gap-3'>
           <div className='min-w-0'>
-            <div className='text-sm text0muted-foreground'>Member</div>
-            <div className='mt-1 text-base font-semibold truncate'>{member.name_kFull}</div>
+            <div className='page-eyebrow'>Member</div>
+            <div className='mt-3 truncate text-lg font-semibold text-foreground'>{member.name_kFull}</div>
             <div className='text-sm text-muted-foreground'>{member.nameOfficial}</div>
           </div>
         </div>

@@ -56,3 +56,22 @@ export const toInt = (v?: string) => {
 
   return Number.isFinite(n) ? n : undefined;
 }
+
+
+export const getInitials = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) return 'IN';
+
+  const parts = normalized
+    .replace(/@.*/, '')
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) return 'IN';
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2);
+};

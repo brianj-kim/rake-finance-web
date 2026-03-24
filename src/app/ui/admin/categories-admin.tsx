@@ -179,7 +179,7 @@ const CategoriesAdmin = ({ initialRows }: Props) => {
               </label>
               <select
                 id='create-range'
-                className='h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm'
+                className='h-11 w-full rounded-xl border bg-background px-3 text-sm text-foreground outline-none'
                 value={createValues.range}
                 onChange={(event) => handleCreateValueChange('range')(event.target.value as CategoryRange)}
               >
@@ -236,7 +236,7 @@ const CategoriesAdmin = ({ initialRows }: Props) => {
                 type='checkbox'
                 checked={createValues.isParent}
                 onChange={(event) => handleCreateValueChange('isParent')(event.target.checked)}
-                className='h-4 w-4 rounded border border-gray-300'
+                className='h-4 w-4 rounded border'
               />
               <label htmlFor='create-parent' className='text-sm'>
                 Is Parent
@@ -281,7 +281,7 @@ const CategoriesAdmin = ({ initialRows }: Props) => {
                     <TableCell>
                       {isEditing ? (
                         <select
-                          className='h-8 rounded-md border border-gray-300 bg-white px-2 text-sm'
+                          className='h-9 rounded-xl border bg-background px-3 text-sm text-foreground outline-none'
                           value={editValues.range}
                           onChange={(event) =>
                             handleEditValueChange('range')(event.target.value as CategoryRange)
@@ -337,7 +337,7 @@ const CategoriesAdmin = ({ initialRows }: Props) => {
                           type='checkbox'
                           checked={editValues.isParent}
                           onChange={(event) => handleEditValueChange('isParent')(event.target.checked)}
-                          className='h-4 w-4 rounded border border-gray-300'
+                          className='h-4 w-4 rounded border'
                         />
                       ) : row.isParent ? (
                         'Yes'

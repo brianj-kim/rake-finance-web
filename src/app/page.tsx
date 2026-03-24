@@ -2,6 +2,7 @@ import { canAccessAdmin, canAccessFinance, isSignedIn } from "@/app/lib/auth";
 import SignOutButton from "@/app/ui/auth/sign-out-button";
 import Link from "next/link";
 import {
+  ArrowRightIcon,
   BanknotesIcon,
   CreditCardIcon,
   UsersIcon,
@@ -25,39 +26,43 @@ const TileCard = ({ t }: { t: Tile }) => {
   const CardInner = (
     <div
       className={[
-        "h-full rounded-lg border border-gray-200 bg-white shadow-sm transition-colors",
-        t.disabled ? "opacity-60" : "hover:bg-gray-50",
+        "panel-muted h-full overflow-hidden p-5",
+        t.disabled ? "opacity-70" : "",
       ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-3 border-b bg-gray-100 px-4 py-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <t.icon className="h-5 w-5 text-gray-700" />
-            <div className="font-semibold truncate">{t.title}</div>
-            {t.badge ? (
-            <div className="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-              {t.badge}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-primary">
+            <t.icon className="h-6 w-6" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="truncate text-lg font-semibold text-foreground">{t.title}</div>
+              {t.badge ? (
+                <div className="inline-flex rounded-full border bg-background px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                  {t.badge}
+                </div>
+              ) : null}
             </div>
-          ) : null}
+            <div className="mt-3 text-sm leading-6 text-muted-foreground">{t.description}</div>
           </div>
-          
+        </div>
+        <div className="rounded-full border bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          {t.disabled ? "Planned" : "Ready"}
         </div>
       </div>
 
-      <div className="px-4 py-3 text-sm text-muted-foreground">
-        {t.description}
-      </div>
-
-      <div className="px-4 pb-4">
+      <div className="mt-8">
         <div
           className={[
-            "inline-flex items-center rounded-md px-3 py-2 text-sm font-medium",
+            "inline-flex items-center gap-2 text-sm font-semibold",
             t.disabled
-              ? "bg-gray-100 text-gray-500"
-              : "bg-blue-600 text-white hover:bg-blue-700",
+              ? "text-muted-foreground"
+              : "text-primary",
           ].join(" ")}
         >
-          {t.disabled ? "Not available" : "Open"}
+          {t.disabled ? "Not available yet" : "Open workspace"}
+          <ArrowRightIcon className="h-4 w-4" />
         </div>
       </div>
     </div>
@@ -68,7 +73,7 @@ const TileCard = ({ t }: { t: Tile }) => {
   return (
     <Link
       href={t.href}
-      className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-lg"
+      className="block rounded-[1.35rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       {CardInner}
     </Link>
@@ -118,46 +123,50 @@ const Page = async () => {
   ];
 
   return (
-    <main className="min-h-screen p-6">
-      <LandingPageHeader />
+    <main className="min-h-screen px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-[1400px] flex-col gap-6">
+        <LandingPageHeader />
 
-      {/* Modules */}
-      <div className="mt-6">
-        <div className="mb-3 flex flex-col gap-1">
-          <h2 className="text-base font-semibold text-foreground">Modules</h2>
-          <p className="text-sm text-muted-foreground">
-            Choose where you want to work. Planned features are shown but disabled.
-          </p>
-        </div>
+        <section className="panel p-6 sm:p-7">
+          <div className="mb-5 flex flex-col gap-2">
+            <h2 className="text-lg font-semibold text-foreground">Modules</h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Choose where you want to work. Planned features are shown but disabled.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {tiles.map((t) => (
-            <TileCard key={t.title} t={t} />
-          ))}
-        </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {tiles.map((t) => (
+              <TileCard key={t.title} t={t} />
+            ))}
+          </div>
+        </section>
 
-        <div className='grid grid-cols-1 mt-6'>
-          {/* Logout button (only if signed in) */}
-          {signedIn ? (
-            <div className="shrink-0">
-              <SignOutButton
-                className='border m'
-              />
+        {signedIn ? (
+          <section className="panel-muted flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-foreground">Signed in</div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                End the current session before switching accounts or devices.
+              </div>
             </div>
-          ) : null}
-        </div>
-      </div>
+            <div className="sm:w-[200px]">
+              <SignOutButton />
+            </div>
+          </section>
+        ) : null}
 
-      {/* Roadmap (lightweight) */}
-      <div className="mt-6 rounded-lg border bg-gray-50 p-4">
-        <div className="text-sm font-semibold">Next iterations (planned)</div>
-        <ul className="mt-2 list-disc pl-5 text-sm text-muted-foreground space-y-1">
-          <li>Households → dependents → adult member promotion</li>
-          <li>Year-based cell group changes</li>
-          <li>Admin: manage income type and method categories</li>
-          <li>Admin: church/charity profile + authorized signer</li>
-          <li>Expenditure module + reporting</li>
-        </ul>
+        <section className="panel-muted p-6">
+          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Next Iterations
+          </div>
+          <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
+            <li>Households, dependents, and adult-member promotion flows.</li>
+            <li>Year-based cell group changes and longer-term member history.</li>
+            <li>More admin controls for categories, charity profile, and signers.</li>
+            <li>Expenditure module, reporting, and cross-module financial summaries.</li>
+          </ul>
+        </section>
       </div>
     </main>
   );

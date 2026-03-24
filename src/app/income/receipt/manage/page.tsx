@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { lusitana } from '@/app/ui/fonts';
 import { toInt } from '@/app/lib/utils';
 
 import YearSelect from '@/app/ui/income/year-select';
@@ -13,6 +12,8 @@ import { canAccessFinance, requireFinanceAccess } from '@/app/lib/auth';
 
 //Bulk Generation of Receipts 
 import GenerateYearReceiptsButton from '@/app/ui/receipt/generate-year-receipts-button';
+import PageIntro from '@/app/ui/page-intro';
+import { buttonVariants } from '@/components/ui/button';
 
 const ManageReceiptsPage = async (props: {
   searchParams?: Promise<{ query?: string; page?: string; year?: string }>;
@@ -38,25 +39,29 @@ const ManageReceiptsPage = async (props: {
   ]);
 
   return (
-    <main>
-      <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Manage Receipts</h1>
-
-      <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
-        <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2'>
-          <YearSelect selectedYear={selectedYear} years={years} />
-          <div className='w-full sm:w-auto'>
-            <SearchBox selectedYear={selectedYear} initialQuery={query}/>
-          </div>
-        </div>
-
-        <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end'>
-          {canManageFinance ? <GenerateYearReceiptsButton taxYear={selectedYear} /> : null}
-          <Link
-            href='/income/receipt'
-            className='inline-flex items-center justify-center rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50'
-          >
+    <main className="space-y-6">
+      <PageIntro
+        title="Manage Receipts"
+        description="Search generated receipts, bulk delete when needed, and keep yearly receipt output organized."
+        actions={
+          <Link href='/income/receipt' className={buttonVariants({ variant: 'outline' })}>
             Back
           </Link>
+        }
+      />
+
+      <div className='toolbar-panel flex flex-col gap-4'>
+        <div className='flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between'>
+          <div className='flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center'>
+            <YearSelect selectedYear={selectedYear} years={years} />
+            <div className='w-full xl:min-w-[340px]'>
+              <SearchBox selectedYear={selectedYear} initialQuery={query}/>
+            </div>
+          </div>
+
+          <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end'>
+            {canManageFinance ? <GenerateYearReceiptsButton taxYear={selectedYear} /> : null}
+          </div>
         </div>
       </div>
 

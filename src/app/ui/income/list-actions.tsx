@@ -27,13 +27,13 @@ const ListActions = ({ income, incomeTypes, incomeMethods, canUpdate, canDelete 
         <button
           type='button'
           onClick={() => setEditOpen(true)}
-          className='rounded-md border p-2 hover:bg-muted'
+          className='rounded-xl border bg-background p-2 text-muted-foreground'
           aria-label='Edit Income'
         >
           <PencilIcon className='w-5' />
         </button>
       ) : (
-        <span className='rounded-md border p-2 text-gray-300' aria-hidden='true'>
+        <span className='rounded-xl border bg-muted p-2 text-slate-300' aria-hidden='true'>
           <PencilIcon className='w-5' />
         </span>
       )}
@@ -42,7 +42,7 @@ const ListActions = ({ income, incomeTypes, incomeMethods, canUpdate, canDelete 
         type='button'
         onClick={() => setDeleteOpen(true)}
         disabled={typeof id !== 'number' || !canDelete}
-        className='rounded-md border p-2 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40'
+        className='rounded-xl border bg-background p-2 text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40'
         aria-label='Delete Income'        
       >
         <TrashIcon className='w-5' />

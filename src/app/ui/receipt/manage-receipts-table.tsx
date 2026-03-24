@@ -32,19 +32,19 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
   } = useReceiptBulkActions(rows);
 
   return (
-    <div className='mt-4 rounded-md border border-gray-200'>
-      <div className='flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2'>
-        <div className='text-sm text-gray-700'>
+    <div className='panel mt-4 overflow-hidden'>
+      <div className='flex items-center justify-between border-b bg-muted px-4 py-3'>
+        <div className='text-sm text-foreground'>
           {allowDelete ? (
             selectedCount > 0 ? (
               <>
                 Selected <span className='font-medium'>{selectedCount}</span>
               </>
             ) : (
-              <span className='text-gray-500'>Select receipts to bulk delete</span>
+              <span className='text-muted-foreground'>Select receipts to bulk delete</span>
             )
           ) : (
-            <span className='text-gray-500'>Read-only receipt access</span>
+            <span className='text-muted-foreground'>Read-only receipt access</span>
           )}
         </div>
 
@@ -58,17 +58,17 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
             {pending ? 'Deleting...' : 'Bulk delete'}
           </Button>
         ) : (
-          <span className='text-sm text-gray-500'>Read-only</span>
+          <span className='text-sm text-muted-foreground'>Read-only</span>
         )}
       </div>
 
-      <div className='grid grid-cols-12 gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700'>
+      <div className='grid grid-cols-12 gap-2 border-b bg-muted px-4 py-3 text-sm font-medium text-muted-foreground'>
         <div className='col-span-1'>
           <Checkbox 
             checked={allSelected ? true : someSelected ? 'indeterminate' : false}
             onCheckedChange={allowDelete ? toggleAll : undefined}
             disabled={!allowDelete}
-            className='data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600'
+            className='data-[state=checked]:bg-primary data-[state=checked]:border-primary'
           />
         </div>
         <div className='col-span-2'>Issued</div>
@@ -85,14 +85,14 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
         return (
           <div 
             key={r.id}
-            className='grid grid-cols-12 gap-2 px-3 py-2 border-b last:border-b-0 border-gray-100 text-sm items-center'
+            className='grid grid-cols-12 items-center gap-2 border-b px-4 py-3 text-sm last:border-b-0'
           >
             <div className='col-span-1' onClick={(e) => e.stopPropagation()}>
               <Checkbox 
                 checked={checked}
                 onCheckedChange={allowDelete ? () => toggleOne(r.id) : undefined}
                 disabled={!allowDelete}
-                className='data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white'
+                className='data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-white'
               />
             </div>
 
@@ -109,7 +109,7 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
                   href={r.pdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-primary"
                 >
                   Open PDF
                 </a>

@@ -68,16 +68,17 @@ const LoginForm = ({ next }: Props) => {
   };
 
   return (
-    <div className="w-full max-w-sm rounded-lg border bg-white p-6 shadow-sm">
-      <div className="mb-5">
-        <h1 className="text-xl font-semibold">Admin Sign In</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="panel w-full max-w-sm p-6 sm:p-7">
+      <div className="mb-6">
+        <div className="page-eyebrow">Secure Access</div>
+        <h1 className="mt-3 text-2xl font-semibold text-foreground">Admin Sign In</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Use your admin account to access modules.
         </p>
       </div>
 
       {error ? (
-        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="mb-4 rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       ) : null}
@@ -111,12 +112,12 @@ const LoginForm = ({ next }: Props) => {
           />
         </div>
 
-        <Button type="submit" className="w-full bg-blue-600 text-white hover:bg-blue-700" disabled={loading}>
+        <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Signing in..." : "Sign in"}
         </Button>
       </form>
 
-      <div className="mt-4 text-xs text-muted-foreground">
+      <div className="mt-5 rounded-xl border bg-muted px-4 py-3 text-xs text-muted-foreground">
         Redirect after login: <span className="font-medium text-foreground">{redirectTo}</span>
       </div>
     </div>

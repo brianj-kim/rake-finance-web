@@ -185,7 +185,7 @@ const MemberCreateForm = () => {
               )}
             />
 
-            <div className='md:col-span-2 flex justify-end gap-2 pt-2'>
+            <div className='md:col-span-2 flex justify-end gap-2 border-t pt-4'>
               <Button type='button' variant='ghost' onClick={() => router.push('/income/member')}>
                 Cancel
               </Button>

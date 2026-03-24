@@ -12,45 +12,77 @@ import {
 type NavItem = {
   label: string;
   href: string;
-  activePrefixes: string[];
+  match: "exact" | "prefix";
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
 
 const items: NavItem[] = [
-  { label: "Admin Dashboard", href: "/admin", activePrefixes: ["/admin"], icon: Squares2X2Icon },
-  { label: "Charity Profile", href: "/admin/charity", activePrefixes: ["/admin/charity"], icon: BuildingOffice2Icon },
-  { label: "Category Admin", href: "/admin/category", activePrefixes: ["/admin/category"], icon: TagIcon },
+  {
+    label: "Dashboard",
+    href: "/admin",
+    match: "exact",
+    icon: Squares2X2Icon,
+  },
+  {
+    label: "Charity Profile",
+    href: "/admin/charity",
+    match: "prefix",
+    icon: BuildingOffice2Icon,
+  },
+  {
+    label: "Category Admin",
+    href: "/admin/category",
+    match: "prefix",
+    icon: TagIcon,
+  },
 ]
 
 const normalize = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
 
-const isActive = (pathname: string, href: string, activePrefixes: string[]) => {
+const isActive = (pathname: string, href: string, match: NavItem["match"]) => {
   const path = normalize(pathname);
-  const bases = (activePrefixes?.length ? activePrefixes : [href]).filter(Boolean).map(normalize);
-  return bases.includes(path) || bases.some((b) => b !== '/admin' && path.startsWith(b));
+  const base = normalize(href);
+
+  if (match === "exact") return path === base;
+
+  return path === base || path.startsWith(`${base}/`);
 };
 
 const NavLinks = () => {
   const pathname = usePathname();
 
   return (
-    <nav className='flex flex-col gap-1 px-1'>
-      {items.map((item) => (
-        <Link 
-          key={item.href}
-          href={item.href}
-          className={clsx(
-            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2",
-            isActive(pathname, item.href, item.activePrefixes)
-              ? "bg-purple-50 text-purple-700"
-              : "bg-gray-50 text-gray-700 hover:bg-gray-100 hover:text-purple-700"
-          )}
-        >
-          <item.icon className='h-5 w-5 shrink-0' />
-          <span className='truncate'>{item.label}</span>
-        </Link>
-      ))}
+    <nav>
+      <div>
+        <div className='sidebar-section-title'>Navigation</div>
+        <div className='space-y-5'>
+          {items.map((item) => (
+            <Link 
+              key={item.href}
+              href={item.href}
+              className={clsx(
+                "flex items-center gap-3 text-sm",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0",
+                isActive(pathname, item.href, item.match)
+                  ? "font-semibold text-slate-900"
+                  : "text-slate-500"
+              )}
+            >
+              <span
+                className={clsx(
+                  "flex h-5 w-5 shrink-0 items-center justify-center",
+                  isActive(pathname, item.href, item.match)
+                    ? "text-slate-900"
+                    : "text-slate-400"
+                )}
+              >
+                <item.icon className='h-5 w-5 shrink-0' />
+              </span>
+              <span className='truncate'>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
     </nav>
   )
 }

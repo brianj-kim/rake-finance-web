@@ -1,12 +1,13 @@
 import { UserPlusIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { fetchFilteredMembers } from '@/app/lib/data';
-import { lusitana } from '@/app/ui/fonts';
+import PageIntro from '@/app/ui/page-intro';
 import SearchBox from '@/app/ui/income/search-box';
 import { formatEnglishName } from '@/app/lib/utils';
 import MemberCardActions from '@/app/ui/income/member-card-actions';
 import Pagination from '@/app/ui/income/pagination';
 import { canAccessFinance, requireFinanceAccess } from '@/app/lib/auth';
+import { buttonVariants } from '@/components/ui/button';
 
 type MemberRow = Awaited<ReturnType<typeof fetchFilteredMembers>>['data'][number];
 
@@ -29,10 +30,19 @@ const MemberList = async (props: {
   const currentYear = new Date().getFullYear();
 
   return (
-    <main>
-      <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Member Admin</h1>
+    <main className="space-y-6">
+      <PageIntro
+        title="Member Admin"
+        description="Search and maintain donor profiles, contact details, and receipt-related tax information."
+        actions={
+          <Link href="/income/member/create" className={buttonVariants({ variant: "default" })}>
+            <UserPlusIcon className="h-5 w-5" />
+            New Member
+          </Link>
+        }
+      />
 
-      <div className="w-full flex flex-col gap-3 md:flex-row md:items-end">
+      <div className="toolbar-panel flex flex-col gap-4">
         <div className="w-full md:flex-1">
           <SearchBox
             selectedYear={currentYear}
@@ -41,19 +51,9 @@ const MemberList = async (props: {
             placeholder="Search member..."
           />
         </div>
-
-        <div className="flex w-full justify-center sm:justify-start md:w-auto md:justify-end">
-          <Link
-            href="/income/member/create"
-            className="inline-flex shrink-0 flex-1 items-center gap-2 whitespace-nowrap md:flex-none rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <UserPlusIcon className="h-5 w-5" />
-            New Member
-          </Link>
-        </div>
       </div>
 
-      <div className="mt-3 text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground">
         {query ? (
           <>
             Showing results for:{" "}
@@ -68,19 +68,19 @@ const MemberList = async (props: {
         )}
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {members.map((m: MemberRow) => (
 
         <div
           key={m.mbr_id}              
-          className='w-full overflow-hidden rounded-md border border-gray-200 hover:bg-gray-100 transition-colors'
+          className='panel-muted w-full overflow-hidden'
         >
           {/* Header */}
-          <div className='w-full flex items-center justify-between gap-3 bg-gray-100 px-4 py-3'>
+          <div className='w-full flex items-center justify-between gap-3 border-b bg-background px-5 py-4'>
             {/* Clickable name area */}
             
             <div className="min-w-0">
-              <div className="font-semibold truncate">{formatValue(m.name_kFull)}</div>
+              <div className="truncate text-base font-semibold text-foreground">{formatValue(m.name_kFull)}</div>
               <div className="text-sm text-muted-foreground truncate">
                 {formatEnglishName(m.name_eFirst, m.name_eLast)}
               </div>
@@ -93,21 +93,21 @@ const MemberList = async (props: {
           </div>              
 
           {/* Content */}
-          <div className="px-4 py-3 space-y-2">
+          <div className="space-y-3 px-5 py-4">
             <div>
-              <div className="text-sm text-muted-foreground">Email</div>
-              <div className="text-sm truncate">{formatValue(m.email)}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Email</div>
+              <div className="mt-1 truncate text-sm text-foreground">{formatValue(m.email)}</div>
             </div>
 
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-sm text-muted-foreground">City</div>
-                <div className="text-sm truncate">{formatValue(m.city)}</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">City</div>
+                <div className="mt-1 truncate text-sm text-foreground">{formatValue(m.city)}</div>
               </div>
 
               <div className="shrink-0 text-right">
-                <div className="text-sm text-muted-foreground">Postal</div>
-                <div className="text-sm">{formatValue(m.postal)}</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Postal</div>
+                <div className="mt-1 text-sm text-foreground">{formatValue(m.postal)}</div>
               </div>
             </div>
           </div>
@@ -118,7 +118,7 @@ const MemberList = async (props: {
       </div>
 
       {members.length === 0 && (
-        <div className="mt-4 rounded-md border p-4 text-sm text-muted-foreground">
+        <div className="empty-state">
           No members found.
         </div>
       )}

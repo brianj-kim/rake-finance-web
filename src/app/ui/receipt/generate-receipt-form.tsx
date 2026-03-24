@@ -43,9 +43,9 @@ const GenerateReceiptForm = ({ memberId }: { memberId: number }) => {
   };
 
   return (
-    <div className='flex items-end gap-2'>
+    <div className='flex flex-wrap items-end gap-2 rounded-lg border bg-muted p-3'>
       <div className='space-y-1'>
-        <div className='text-sm font-medium'>Tax year</div>
+        <div className='text-sm font-medium text-foreground'>Tax year</div>
         <Input value={taxYear} onChange={(e) => setTaxYear(e.target.value)} className='w-[120px]' />        
       </div>
 

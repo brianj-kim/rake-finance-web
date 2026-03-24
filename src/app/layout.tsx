@@ -9,8 +9,8 @@ const RootLayout = ({
 }) => {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`}>
-        <main>{children}</main>
+      <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
+        <main className="min-h-screen">{children}</main>
         <Toaster />
       </body>
     </html>

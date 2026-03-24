@@ -2,7 +2,7 @@
 import { RectangleStackIcon } from "@heroicons/react/24/outline";
 import Link from "next/link"; 
 import { fetchFilteredIncome, getIncomeMethods, getIncomeTypes } from "@/app/lib/data";
-import { lusitana } from "@/app/ui/fonts";
+import PageIntro from "@/app/ui/page-intro";
 
 import SearchBox from "@/app/ui/income/search-box";
 import Pagination from "@/app/ui/income/pagination";
@@ -10,6 +10,7 @@ import Table from "@/app/ui/income/table";
 import { toInt } from "@/app/lib/utils";
 import DateFilters from "@/app/ui/income/date-filters";
 import { canAccessFinance, requireFinanceAccess } from '@/app/lib/auth';
+import { buttonVariants } from "@/components/ui/button";
 
 const IncomeList = async (props: {
   searchParams?: Promise<{
@@ -51,47 +52,45 @@ const IncomeList = async (props: {
 
 
   return (
-    <main>
-      <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Income List</h1>
-      <div className='w-full flex flex-col gap-3 items-stretch md:flex-row md:items-end'>
-        <div className='w-full flex flex-col gap-3 items-center sm:flex-row sm:flex-wrap sm:items-end md:justify-start'>
-          <DateFilters 
-            selectedYear={selectedYear}
-            selectedMonth={selectedMonth}
-            selectedDay={selectedDay}
-            years={years}
-          />  
-
-          <div className='w-full sm:flex-1'>
-            <SearchBox 
-              selectedYear={selectedYear} 
-              initialQuery={query} 
-              clearKeys={['month', 'day', 'query', 'page']}
-              placeholder='Search Member...'
-            />
-          </div>
-        </div>
-
-        <div className='flex w-full md:w-auto md:justify-end'>
-          <Link
-            href={exportHref}
-            className="flex flex-1 shrink-0 items-center gap-2 whitespace-nowrap md:flex-none rounded-md border border-gray-200 bg-sky-100 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-sky-100"
-          >
-            Export Excel
-          </Link>
-        </div>
-
-        <div className='flex w-full md:w-auto md:justify-end'>
-          <Link 
-            href='/income/list/create' 
-            className='flex flex-1 shrink-0 items-center gap-2 whitespace-nowrap md:flex-none rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white'
-          >
-            <RectangleStackIcon width={24} height={24}  className='pr-2' />
+    <main className="space-y-6">
+      <PageIntro
+        title="Income List"
+        description="Filter by date, search individual members, export the current slice, or jump into batch entry."
+        actions={
+          <>
+            <Link href={exportHref} className={buttonVariants({ variant: "secondary" })}>
+              Export Excel
+            </Link>
+            <Link href='/income/list/create' className={buttonVariants({ variant: "default" })}>
+              <RectangleStackIcon width={20} height={20} />
               Create Batch Income
             </Link>
-        </div>
+          </>
+        }
+      />
 
+      <div className='toolbar-panel flex flex-col gap-4'>
+        <div className='flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between'>
+          <div className='flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end'>
+            <DateFilters 
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+              selectedDay={selectedDay}
+              years={years}
+            />  
+
+            <div className='w-full xl:min-w-[340px] xl:flex-1'>
+              <SearchBox 
+                selectedYear={selectedYear} 
+                initialQuery={query} 
+                clearKeys={['month', 'day', 'query', 'page']}
+                placeholder='Search member or notes...'
+              />
+            </div>
+          </div>
+        </div>
       </div>
+
       <Table 
         incomeList={data} 
         incomeTypes={incomeTypes}

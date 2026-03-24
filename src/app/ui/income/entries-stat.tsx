@@ -56,7 +56,7 @@ const BatchTotalSummary = ({ control, incomeTypes, incomeMethods, selectedDate, 
   }, [entries, typeMap, methodMap]);
 
    return (    
-    <div className='grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4'>
+    <div className='panel-muted grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-4'>
       <Card>
         <CardHeader className='pb-2'>
           <CardTitle className='text-sm font-medium'>Date</CardTitle>
@@ -97,15 +97,15 @@ const BatchTotalSummary = ({ control, incomeTypes, incomeMethods, selectedDate, 
       </Card>
 
       {/* Batch Total Card */}
-      <Card className='border-blue-200 bg-blue-50'>
+      <Card className='border-primary/20 bg-primary/10'>
         <CardHeader className='pb-2'>
           <CardTitle className='text-sm font-medium'>Batch Total</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className='text-2xl font-semibold tabular-nums'>
+          <div className='text-2xl font-semibold tabular-nums text-foreground'>
             {formatCurrency(totalCents)}
           </div>
-          <div className='mt-2 text-xs text-gray-600'>{entries.length} row(s)</div>
+          <div className='mt-2 text-xs text-muted-foreground'>{entries.length} row(s)</div>
         </CardContent>
       </Card>
 
@@ -116,12 +116,12 @@ const BatchTotalSummary = ({ control, incomeTypes, incomeMethods, selectedDate, 
         </CardHeader>
         <CardContent className='space-y-1'>
           {byType.length === 0 ? (
-            <div className='text-sm text-gray-500'>No entries</div>
+            <div className='text-sm text-muted-foreground'>No entries</div>
           ) : (
             byType.slice(0, 5).map((r) => (
               <div key={r.id} className='flex items-center justify-between gap-2 text-sm'>
-                <span className='truncate text-gray-700'>{r.name}</span>
-                <span className='tabular-nums text-gray-900'>{formatCurrency(r.cents)}</span>
+                <span className='truncate text-foreground'>{r.name}</span>
+                <span className='tabular-nums text-foreground'>{formatCurrency(r.cents)}</span>
               </div>
             ))
           )}
@@ -135,12 +135,12 @@ const BatchTotalSummary = ({ control, incomeTypes, incomeMethods, selectedDate, 
         </CardHeader>
         <CardContent className='space-y-1'>
           {byMethod.length === 0 ? (
-            <div className='text-sm text-gray-500'>No entries</div>
+            <div className='text-sm text-muted-foreground'>No entries</div>
           ) : (
             byMethod.slice(0, 5).map((r) => (
               <div key={r.id} className='flex items-center justify-between gap-2 text-sm'>
-                <span className='truncate text-gray-700'>{r.name}</span>
-                <span className='tabular-nums text-gray-900'>{formatCurrency(r.cents)}</span>
+                <span className='truncate text-foreground'>{r.name}</span>
+                <span className='tabular-nums text-foreground'>{formatCurrency(r.cents)}</span>
               </div>
             ))
           )}

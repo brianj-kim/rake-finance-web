@@ -59,7 +59,7 @@ const DeleteIncomeDialog = ({ income, onClose }: Props) => {
           <AlertDialogAction 
             onClick={handleDelete}
             disabled={isDeleting}
-            className='bg-red-600 hover:bg-red-700'
+            className='bg-destructive'
           >
             {isDeleting ? 'Deleting...' : 'Dlete'}
           </AlertDialogAction>

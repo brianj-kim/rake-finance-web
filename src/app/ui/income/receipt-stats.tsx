@@ -12,12 +12,12 @@ const ReceiptStatsCard = (props: Props) => {
   const { taxYear, totalMembers, generatedCount, notGeneratedCount }  = props;
 
   return (
-    <div className='rounded-md border border-gray-200 bg-white p-4 shadow-sm' >
+    <div className='panel-muted p-5' >
       <div className='flex items-start justify-between gap-3'>
         <div>
-          <div className='text-sm text-muted-foreground'>Receipts ({taxYear})</div>
-          <div className='mt-2 text-2xl font-semibold'>{generatedCount}</div>
-          <div className='text-xs text-muted-foreground'>Generated</div>
+          <div className='page-eyebrow'>Receipts ({taxYear})</div>
+          <div className='mt-3 text-3xl font-semibold text-foreground'>{generatedCount}</div>
+          <div className='text-sm text-muted-foreground'>Generated</div>
         </div>
 
         <Link
@@ -28,18 +28,18 @@ const ReceiptStatsCard = (props: Props) => {
         </Link>
       </div>
 
-      <div className='mt-3 grid grid-cols-3 gap-3 text-sm'>
-        <div className='rounded-md bg-gray-50 p-2'>
-          <div className='text-muted-foreground text-xs'>Total</div>
-          <div className='font-medium'>{totalMembers}</div>
+      <div className='mt-5 grid grid-cols-3 gap-3 text-sm'>
+        <div className='rounded-lg border bg-muted p-3'>
+          <div className='text-muted-foreground text-xs uppercase'>Total</div>
+          <div className='mt-2 font-medium text-foreground'>{totalMembers}</div>
         </div>
-        <div className='rounded-md bg-gray-50 p-2'>
-          <div className='text-muted-foreground text-xs'>Generated</div>
-          <div className='font-medium'>{generatedCount}</div>
+        <div className='rounded-lg border bg-muted p-3'>
+          <div className='text-muted-foreground text-xs uppercase'>Generated</div>
+          <div className='mt-2 font-medium text-foreground'>{generatedCount}</div>
         </div>
-        <div className='rounded-md bg-gray-50 p-2'>
-          <div className='text-muted-foreground text-xs'>Not yet</div>
-          <div className='font-medium'>{notGeneratedCount}</div>
+        <div className='rounded-lg border bg-muted p-3'>
+          <div className='text-muted-foreground text-xs uppercase'>Not yet</div>
+          <div className='mt-2 font-medium text-foreground'>{notGeneratedCount}</div>
         </div>
       </div>
     </div>

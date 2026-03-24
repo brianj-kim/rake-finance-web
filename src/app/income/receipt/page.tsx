@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { lusitana } from '@/app/ui/fonts';
 import { toInt } from '@/app/lib/utils';
 
 import { getReceiptMemberMenu } from '@/app/lib/receipt-data';
@@ -8,6 +7,8 @@ import YearSelect from '@/app/ui/income/year-select';
 import SearchBox from '@/app/ui/income/search-box';
 import ReceiptMemberGrid from '@/app/ui/receipt/receipt-member-grid';
 import { requireFinanceAccess } from '@/app/lib/auth';
+import PageIntro from '@/app/ui/page-intro';
+import { buttonVariants } from '@/components/ui/button';
 
 
 const ReceiptMainPage = async (props: {
@@ -35,39 +36,34 @@ const ReceiptMainPage = async (props: {
   });
 
   return (
-    <main>
-      <h1 className={`${lusitana.className} text-xl md:text-2xl`}>
-        Donation Reciept
-      </h1>
-      <p className="text-sm text-muted-foreground mb-4 ">
-        Select a member to review donations and generate a receipt.
-      </p>
-
-      <div className='w-full flex flex-col gap-3 md:flex-row md:items-end'>
-        
-        <div className='w-full flex flex-col gap-3 items-center sm:flex-row sm:flex-wrap sm:items-end sm:justify-start md:flex-1'>
-          <div className='flex items-center gap-2'>
-            <span className='text-sm text-muted-foreground whitespace-nowrap'>Tax Year:</span>
-            <YearSelect selectedYear={selectedYear} years={years} />
-          </div>
-
-          <div className='w-full sm:flex-1'>
-            <SearchBox 
-              selectedYear={selectedYear}
-              initialQuery={query}
-              clearKeys={['query', 'page']}
-              placeholder='Search member name'
-            />
-          </div>
-        </div>
-
-        <div className='flex w-full justify-center sm:justify-start md:w-auto md:justify-end'>
-          <Link 
-            href='/income/receipt/manage' 
-            className='flex flex-1 shrink-0 items-center gap-2 whitespace-nowrap md:flex-none rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white'
-          >
+    <main className="space-y-6">
+      <PageIntro
+        title="Donation Receipt"
+        description="Select a member to review donations, confirm the included entries, and open generated PDFs."
+        actions={
+          <Link href='/income/receipt/manage' className={buttonVariants({ variant: 'default' })}>
             Manage Receipts
           </Link>
+        }
+      />
+
+      <div className='toolbar-panel flex flex-col gap-4'>
+        <div className='flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between'>
+          <div className='flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end'>
+            <div className='flex items-center gap-3'>
+              <span className='text-sm text-muted-foreground whitespace-nowrap'>Tax Year</span>
+              <YearSelect selectedYear={selectedYear} years={years} />
+            </div>
+
+            <div className='w-full xl:min-w-[340px] xl:flex-1'>
+              <SearchBox 
+                selectedYear={selectedYear}
+                initialQuery={query}
+                clearKeys={['query', 'page']}
+                placeholder='Search member name'
+              />
+            </div>
+          </div>
         </div>
       </div>
       <ReceiptMemberGrid members={items} taxYear={selectedYear} />

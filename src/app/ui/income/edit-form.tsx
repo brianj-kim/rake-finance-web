@@ -18,6 +18,7 @@ type Props = {
   incomeTypes: CategoryDTO[];
   incomeMethods: CategoryDTO[];
   mode?: 'page' | 'modal';
+  showHeader?: boolean;
   onDone?: () => void;
   returnTo?: string;
 };
@@ -38,6 +39,7 @@ const EditIncomeForm = ({
   incomeTypes, 
   incomeMethods,
   mode = 'page',
+  showHeader = true,
   onDone,
   returnTo
 }: Props) => {
@@ -111,22 +113,22 @@ const EditIncomeForm = ({
     }
   };
 
-  const Header = (
-    <div className={isModal ? 'border-b px-6 py-5' : 'mb-4 flex items-center justify-between gap-3'}>
+  const Header = showHeader ? (
+    <div className={isModal ? 'border-b px-6 py-5' : 'mb-5 flex items-center justify-between gap-3'}>
       <div className={isModal ? 'space-y-0.5' : ''}>
-        <h1 className='text-xl font-sembold'>Edit Income</h1>
+        <h1 className='text-xl font-semibold text-foreground'>Edit Income</h1>
         {isModal ? (
           <p className='text-sm text-muted-foreground'>Income #{income.inc_id}</p>
         ) : null}
       </div>
 
       {!isModal ? (
-        <Link href={returnToUrl} className='text-sm underline'>
+        <Link href={returnToUrl} className='text-sm text-primary'>
           Back to list
         </Link>
       ) : null}
     </div>
-  );
+  ) : null;
 
   const Footer = (
     <div className={isModal ? 'border-t px-6 py-4' : ''}>
@@ -276,7 +278,7 @@ const EditIncomeForm = ({
   return (
     <div className="w-full max-w-3xl">
       {Header}
-      <form onSubmit={onSubmit} className="space-y-4 rounded-lg border p-6 shadow-sm">
+      <form onSubmit={onSubmit} className="panel space-y-4 p-6">
         {FormFields}
         {Footer}
       </form>

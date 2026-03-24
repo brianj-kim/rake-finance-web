@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { lusitana } from "@/app/ui/fonts";
 import YearSelect from "@/app/ui/income/year-select";
+import PageIntro from "@/app/ui/page-intro";
 
 import { 
 	getIncomeKpis, 
@@ -34,46 +36,85 @@ const IncomeDash = async ({ searchParams }: { searchParams: Promise<{ year?: str
   ]);
     
     return (
-        <main>
-      <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Income Dashboard</h1>
-
-      <div className="mb-4 flex items-center gap-2">
-        <label htmlFor="year" className="text-sm font-medium">Year:</label>
-        <YearSelect selectedYear={selectedYear} years={years} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        <KpiCards
-          year={selectedYear}
-          yearTotalCents={kpi.yearTotalCents}
-          monthTotalCents={kpi.monthTotalCents}
-          donationCount={kpi.donationCount}
-          uniqueDonors={kpi.uniqueDonors}
+      <main className="space-y-6">
+        <PageIntro
+          title="Income Dashboard"
+          description="Monitor annual performance, track month-by-month donation patterns, and keep receipt readiness in view."
+          actions={
+            <div className="panel-muted flex items-center gap-3 px-4 py-3">
+              <label htmlFor="year" className="text-sm font-medium text-muted-foreground">
+                Year
+              </label>
+              <YearSelect selectedYear={selectedYear} years={years} />
+            </div>
+          }
         />
-      </div>
 
-      <div className="mt-3 grid gap-3 grid-cols-1">        
-        <MonthlyQuarterlyStats monthly={monthly} quarterly={quarterly} />				
-      </div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <KpiCards
+              year={selectedYear}
+              yearTotalCents={kpi.yearTotalCents}
+              monthTotalCents={kpi.monthTotalCents}
+              donationCount={kpi.donationCount}
+              uniqueDonors={kpi.uniqueDonors}
+            />
+          </div>
 
-      <div className="mt-3 grid gap-3 grid-cols-2 md:grid-cols-2 sm:grid-cols-1">
-        <BreakdownStats
-          title="By Type"
-          rows={byType}
-          viewAllHref={`/income/list?year=${selectedYear}`}
-        />
-        <BreakdownStats
-          title="By Method"
-          rows={byMethod}
-          viewAllHref={`/income/list?year=${selectedYear}`}
-        />
-      </div>
+          <MonthlyQuarterlyStats monthly={monthly} quarterly={quarterly} />
 
-      <div className='mt-3'>
-				<ReceiptStatsCard {...receiptStats} />
-			</div>
-    </main>
-  );
+          <div className="grid gap-4 lg:grid-cols-2">
+            <BreakdownStats
+              title="By Type"
+              rows={byType}
+              viewAllHref={`/income/list?year=${selectedYear}`}
+            />
+            <BreakdownStats
+              title="By Method"
+              rows={byMethod}
+              viewAllHref={`/income/list?year=${selectedYear}`}
+            />
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+            <ReceiptStatsCard {...receiptStats} />
+            <div className="panel-muted p-5">
+              <div className="page-eyebrow">Quick Routes</div>
+              <div className={`${lusitana.className} mt-3 text-xl font-semibold text-foreground`}>
+                Keep the workflow moving
+              </div>
+              <div className="mt-2 text-sm leading-6 text-muted-foreground">
+                Jump directly into the areas most teams touch every week.
+              </div>
+
+              <div className="mt-5 space-y-3">
+                <Link
+                  href={`/income/list?year=${selectedYear}`}
+                  className="flex items-center justify-between rounded-lg border bg-background px-4 py-4 text-sm text-foreground"
+                >
+                  <span>Review the full income list</span>
+                  <span className="text-primary">Open</span>
+                </Link>
+                <Link
+                  href="/income/list/create"
+                  className="flex items-center justify-between rounded-lg border bg-background px-4 py-4 text-sm text-foreground"
+                >
+                  <span>Start a new batch entry</span>
+                  <span className="text-primary">Create</span>
+                </Link>
+                <Link
+                  href="/income/member"
+                  className="flex items-center justify-between rounded-lg border bg-background px-4 py-4 text-sm text-foreground"
+                >
+                  <span>Manage member tax details</span>
+                  <span className="text-primary">Browse</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
 };
 
 export default IncomeDash;

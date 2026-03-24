@@ -69,7 +69,7 @@ const GenerateYearReceiptsButton = (props: { taxYear: number }) => {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button disabled={pending} className='bg-blue-600 border-blue-600 hover:bg-blue-700'>
+        <Button disabled={pending}>
           {pending ? 'Generating...' : `Generate ${taxYear} receipts`}
         </Button>
       </AlertDialogTrigger>

@@ -21,7 +21,7 @@ const Pagination = ({ totalPages }: { totalPages: number }) => {
   
   return (
     <>
-      <div className='inline-flex'>
+      <div className='inline-flex items-center rounded-full border bg-background p-1'>
         <PaginationArrow
           direction='left'
           href={createPageURL(currentPage - 1)}
@@ -75,13 +75,10 @@ const PaginationNumber = ({
   isActive: boolean;
 }) => {
   const className = clsx(
-    'flex h-10 w-10 items-center justify-center text-xs font-bold border border-gray-400 text-gray-500',
+    'flex h-10 w-10 items-center justify-center rounded-full text-xs font-semibold text-muted-foreground',
     {
-      'rounded-l-md': position === 'first' || position === 'single',
-      'rounded-r-md': position === 'last' || position === 'single',
-      'z-10 bg-blue-600 border-blue-600 text-white': isActive,
-      'hover:bg-gray-100': !isActive && position !== 'middle',
-      'text-gray-300': position === 'middle'
+      'z-10 bg-primary text-white': isActive,
+      'text-slate-300': position === 'middle'
     }
   );
 
@@ -104,12 +101,9 @@ const PaginationArrow = ({
   isDisabled: boolean;
 }) => {
   const className = clsx(
-    'flex h-10 w-10 items-center justify-center rounded-md border border-gray-400 text-gray-500',
+    'flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground',
     {
-      'pointer-events-none text-gray-300': isDisabled,
-      'hover:bg-gray-100': !isDisabled,
-      'mr-2 md:mr-4': direction === 'left',
-      'ml-2 md:ml-4': direction === 'right'
+      'pointer-events-none text-slate-300': isDisabled,
     }
   );
 

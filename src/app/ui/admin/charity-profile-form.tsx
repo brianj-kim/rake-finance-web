@@ -306,10 +306,10 @@ const CharityProfileForm = ({ initialValues }: Props) => {
               <img
                 src={values.churchLogoUrl}
                 alt='Church logo preview'
-                className='max-h-24 max-w-full rounded-md border border-gray-200 bg-white p-2'
+                className='max-h-24 max-w-full rounded-xl border bg-background p-2'
               />
             ) : (
-              <p className='text-xs text-gray-500'>No logo set.</p>
+              <p className='text-xs text-muted-foreground'>No logo set.</p>
             )}
           </div>
 
@@ -338,10 +338,10 @@ const CharityProfileForm = ({ initialValues }: Props) => {
               <img
                 src={values.authorizedSignature}
                 alt='Authorized signature preview'
-                className='max-h-24 max-w-full rounded-md border border-gray-200 bg-white p-2'
+                className='max-h-24 max-w-full rounded-xl border bg-background p-2'
               />
             ) : (
-              <p className='text-xs text-gray-500'>No signature image set.</p>
+              <p className='text-xs text-muted-foreground'>No signature image set.</p>
             )}
           </div>
         </CardContent>

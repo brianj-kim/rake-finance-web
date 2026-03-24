@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { prisma } from '@/app/lib/prisma';
-import { lusitana } from '@/app/ui/fonts';
 import { formatCurrency } from '@/app/lib/utils';
 
 import GenerateReceiptForm from '@/app/ui/receipt/generate-receipt-form';
 import { canAccessFinance, requireFinanceAccess } from '@/app/lib/auth';
+import PageIntro from '@/app/ui/page-intro';
+import { buttonVariants } from '@/components/ui/button';
 
 const MemberReceiptsPage = async (props: {
   params: Promise<{ id: string }>;
@@ -52,36 +53,22 @@ const MemberReceiptsPage = async (props: {
     [member.name_eFirst, member.name_eLast].filter(Boolean).join(' ') || '-';
 
   return (
-    <main>
-      <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>
-        Donation Receipts
-      </h1>
+    <main className="space-y-6">
+      <PageIntro
+        title="Donation Receipts"
+        description={`${member.name_kFull} (${englishName})`}
+        actions={
+          <>
+            <Link href="/income/member" className={buttonVariants({ variant: 'outline' })}>
+              Back to members
+            </Link>
+            {canGenerateReceipt ? <GenerateReceiptForm memberId={memberId} /> : null}
+          </>
+        }
+      />
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-1">
-          <div className="text-sm text-muted-foreground">
-            {member.name_kFull} ({englishName})
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-end">
-          <Link
-            href="/income/member"
-            className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50 text-center"
-          >
-            Back to members
-          </Link>
-
-          {canGenerateReceipt ? (
-            <div className='sm:min-2-[360px]'>
-              <GenerateReceiptForm memberId={memberId} />
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-4 rounded-md border border-gray-200">
-        <div className="grid grid-cols-5 gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-700">
+      <div className="panel overflow-hidden">
+        <div className="grid grid-cols-5 gap-2 border-b bg-muted px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
           <div>Tax Year</div>
           <div>Serial</div>
           <div>Issued</div>
@@ -90,12 +77,12 @@ const MemberReceiptsPage = async (props: {
         </div>
 
         {receipts.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground">No receipts yet.</div>
+          <div className="p-5 text-sm text-muted-foreground">No receipts yet.</div>
         ) : (
           receipts.map((r) => (
             <div
               key={r.id}
-              className="grid grid-cols-5 gap-2 px-3 py-2 text-sm border-b last:border-b-0 border-gray-100 items-center"
+              className="grid grid-cols-5 items-center gap-2 border-b px-4 py-3 text-sm last:border-b-0"
             >
               <div>{r.taxYear}</div>
               <div>{String(r.serialNumber).padStart(5, '0')}</div>
@@ -106,7 +93,7 @@ const MemberReceiptsPage = async (props: {
               <div className="text-right">
                 {r.pdfUrl ? (
                   <a
-                  className="rounded-md bg-blue-500 px-3 py-2 text-sm font-medium text-white hover:bg-blue-600 inline-flex justify-center"
+                  className="inline-flex justify-center rounded-xl bg-primary px-3 py-2 text-sm font-medium text-white"
                   href={r.pdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -114,7 +101,7 @@ const MemberReceiptsPage = async (props: {
                   Open PDF
                 </a>
                 ) : (
-                  <span className='rounded-md border px-3 py-2 text-sm text-muted-foreground inline-flex justify-center'>
+                  <span className='inline-flex justify-center rounded-xl border px-3 py-2 text-sm text-muted-foreground'>
                     Not generated
                   </span>
                 )}
