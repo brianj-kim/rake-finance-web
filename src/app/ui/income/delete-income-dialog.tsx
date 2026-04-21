@@ -47,7 +47,7 @@ const DeleteIncomeDialog = ({ income, onClose }: Props) => {
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This will permanently delete the income entry for <strong>{income.name}</strong> with amount{" "} 
-            <strong>{formatCurrency(income.amount! / 100)}</strong> from{" "}
+            <strong>{formatCurrency(income.amount ?? 0)}</strong> from{" "}
             <strong>{`${income.year}-${income.month}-${income.day}`}</strong>
             <br />
             <br />

@@ -44,7 +44,7 @@ const LatestIncome = async ({ selectedYear }: LatestIncomeProps) => {
                                     {`${inc.year}-${inc.month}-${inc.day} `}
                                 </div>
                                 <p className={`${lusitana.className} truncate text-sm font-medium md:text-base`} >
-                                    {formatCurrency(inc.amount!/100)}
+                                    {formatCurrency(inc.amount ?? 0)}
                                 </p>                  
                             </div>
                         );
