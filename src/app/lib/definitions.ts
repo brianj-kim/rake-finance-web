@@ -1,6 +1,36 @@
 import { z } from "zod";
 import { normalizePostal, normalizeSpaces } from "@/lib/utils";
 
+const isValidCalendarDate = (year: number, month: number, day: number) => {
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+};
+
+const incomeDateFields = {
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+  day: z.number().int().min(1).max(31),
+};
+
+const validateIncomeDate = (
+  value: { year: number; month: number; day: number },
+  ctx: z.RefinementCtx
+) => {
+  if (!isValidCalendarDate(value.year, value.month, value.day)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['day'],
+      message: 'Enter a real calendar date.',
+    });
+  }
+};
+
+
 const optionalText = (max: number ) => 
   z.string().trim().max(max).optional().nullable().or(z.literal(""));
 
@@ -11,10 +41,8 @@ export const EditIncomeFormSchema = z.object({
   typeId: z.number().int().positive("Select a type"),
   methodId: z.number().int().positive("Select a method"),
   notes: optionalText(255),
-  year: z.number().int().min(2000).max(2100),
-  month: z.number().int().min(1).max(12),
-  day: z.number().int().min(1).max(31),
-});
+  ...incomeDateFields,
+}).superRefine(validateIncomeDate);
 
 export type EditIncomeFormValues = z.infer<typeof EditIncomeFormSchema>;
 
@@ -134,11 +162,9 @@ export const EntrySchema = z.object({
 });
 
 export const BatchSchema = z.object({
-  year: z.number().int(),
-  month: z.number().int().min(1).max(12),
-  day: z.number().int().min(1).max(31),
+  ...incomeDateFields,
   entries: z.array(EntrySchema).min(1),
-});
+}).superRefine(validateIncomeDate);
 
 export type BatchFormInput = z.input<typeof BatchSchema>;
 export type BatchFormValues = z.infer<typeof BatchSchema>;

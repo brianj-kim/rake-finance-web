@@ -194,7 +194,7 @@ const DonationSelector = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[52px]">Sel</TableHead>
+              <TableHead className="w-13">Sel</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Method</TableHead>
