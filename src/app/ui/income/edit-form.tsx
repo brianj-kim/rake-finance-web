@@ -11,8 +11,8 @@ import {
   type CategoryDTO,
   type EditIncomeDTO,
   type EditIncomeFormValues,
-} from '../../lib/definitions';
-import { updateIncome } from '../../lib/actions';
+} from '@/app/lib/definitions';
+import { updateIncome, UpdateIncomeResult } from '@/app/lib/actions';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -42,14 +42,6 @@ type Props = {
   onDone?: () => void;
   returnTo?: string;
 };
-
-type UpdateIncomeResult =
-  | { success: true }
-  | {
-      success: false;
-      message: string;
-      fieldErrors?: Partial<Record<keyof EditIncomeFormValues, string>>;
-    };
 
 const optionLabel = (category: CategoryDTO) =>
   category.detail ? `${category.name} (${category.detail})` : category.name;

@@ -19,7 +19,7 @@ const ListActions = ({ canUpdate, canDelete, onEdit, onDelete }: Props) => {
         type='button'
         onClick={onEdit}
         disabled={!canOpenEdit}
-        className='rounded-md border bg-backgound p-2 text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40'
+        className='rounded-md border bg-background p-2 text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40'
         aria-label="Edit Income"
       >
         <PencilIcon className='w-5' />

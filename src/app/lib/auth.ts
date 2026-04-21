@@ -151,7 +151,7 @@ export const requireAdminAccess = async (options?: {
 export const requireSuperAdmin = async (options?: {
   nextPath?: string;
   unauthorizedRedirectTo?: string;
-}) => requireAdminAccess(options);
+}) => requireRole(ROLE_CODES.SUPER, options);
 
 export const isSignedIn = async () => {
   return Boolean(await getSession());

@@ -79,7 +79,7 @@ const EditIncomeDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className='w=[95vw] sm:max-w-4xl lg:max-w-5xl'>
+      <DialogContent className='w-[95vw] sm:max-w-4xl lg:max-w-5xl'>
         {loadState.status === 'loading' ? (
           <p className='text-sm text-muted-foreground'>Loading...</p>
         ) : null}

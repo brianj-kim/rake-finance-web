@@ -171,7 +171,7 @@ const IncomeTable = ({
                             {income.method ?? '-'}
                           </td>
                           <td className='min-2-70 px-3 py-3 text-muted-foreground'>
-                            <div className='max-w-130 turncate'>
+                            <div className='max-w-130 truncate'>
                               {income.notes?.trim() ? income.notes : '-'}
                             </div>
                           </td>

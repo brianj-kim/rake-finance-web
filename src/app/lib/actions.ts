@@ -133,9 +133,9 @@ export const saveBatchIncome = async (
   } 
 };
 
-type UpdateIncomeFieldErrors = Partial<Record<keyof EditIncomeFormValues, string>>;
+export type UpdateIncomeFieldErrors = Partial<Record<keyof EditIncomeFormValues, string>>;
 
-type UpdateIncomeResult = 
+export type UpdateIncomeResult = 
   | { success: true }
   | { success: false; message: string; fieldErrors?: UpdateIncomeFieldErrors };
 
@@ -190,7 +190,7 @@ export const getIncomeForEdit = async (incomeId: unknown): Promise<GetIncomeForE
   }
 };
 
-export const updateIncome = async (input: unknown) => {
+export const updateIncome = async (input: unknown): Promise<UpdateIncomeResult> => {
   if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' }; 
   }
