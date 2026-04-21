@@ -13,119 +13,145 @@ enum AdminRole {
   pastor
 }
 
+enum ReceiptStatus {
+  issued
+  replacement
+  cancelled
+}
+
 // Added for admin feature
 model Admin {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique @db.VarChar(120)
-  passwordHash  String    @db.VarChar(255)
-  name          String?   @db.VarChar(80)
-  role          AdminRole @default(treasurer) // legacy; remove phase 2
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           Int       @id @default(autoincrement())
+  email        String    @unique @db.VarChar(120)
+  passwordHash String    @db.VarChar(255)
+  name         String?   @db.VarChar(80)
+  role         AdminRole @default(treasurer) // legacy; remove phase 2
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  adminRoles    AdminRoleAssignment[]
+  adminRoles AdminRoleAssignment[]
 }
 
 model Role {
-  id          Int         @id @default(autoincrement())
-  code        String      @unique @db.VarChar(50)
-  name        String      @db.VarChar(100)
-  isSystem    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  isSystem  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   adminRoles  AdminRoleAssignment[]
   permissions RolePermission[]
 }
 
 model Permission {
-  id          Int         @id @default(autoincrement())
-  code        String      @unique @db.VarChar(80)
-  name        String      @db.VarChar(120)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(80)
+  name      String   @db.VarChar(120)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  roles       RolePermission[]
+  roles RolePermission[]
 }
 
 model RolePermission {
-  roleId        Int
-  permissionId  Int
-  createdAt     DateTime    @default(now())
+  roleId       Int
+  permissionId Int
+  createdAt    DateTime @default(now())
 
-  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission    Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@index([permissionId])
 }
 
 model AdminRoleAssignment {
-  adminId       Int
-  roleId        Int
-  assignedAt    DateTime    @default(now())
+  adminId    Int
+  roleId     Int
+  assignedAt DateTime @default(now())
 
-  admin         Admin       @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  role  Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([adminId, roleId])
   @@index([roleId])
 }
 
 model CharityProfile {
-  id                Int @id @default(1)
-  legalName         String @db.VarChar(120)
-  address           String @db.VarChar(120)
-  city              String @db.VarChar(40)
-  province          String @db.VarChar(20)
-  postal            String @db.VarChar(7)
-  registrationNo    String @db.VarChar(20)
-  locationIssued    String @db.VarChar(60)
-  authorizedSigner  String @db.VarChar(80)  // Name/Title shown on receipt
-  charityEmail      String? @db.VarChar(80)
-  charityPhone      String? @db.VarChar(20)
-  charityWebsite    String? @db.VarChar(120)
-  churchLogoUrl     String? @db.VarChar(255)
-  authorizedSignature String? @db.VarChar(255) // signature image url
-  updatedAt         DateTime @updatedAt
+  id                  Int      @id @default(1)
+  legalName           String   @db.VarChar(120)
+  address             String   @db.VarChar(120)
+  city                String   @db.VarChar(40)
+  province            String   @db.VarChar(20)
+  postal              String   @db.VarChar(7)
+  registrationNo      String   @db.VarChar(20)
+  locationIssued      String   @db.VarChar(60)
+  authorizedSigner    String   @db.VarChar(80) // Name/Title shown on receipt
+  charityEmail        String?  @db.VarChar(80)
+  charityPhone        String?  @db.VarChar(20)
+  charityWebsite      String?  @db.VarChar(120)
+  churchLogoUrl       String?  @db.VarChar(255)
+  authorizedSignature String?  @db.VarChar(255) // signature image url
+  updatedAt           DateTime @updatedAt
 }
 
 model Receipt {
-  id              String @id @default(cuid())
-  memberId        Int
-  taxYear         Int
-  issueDate       DateTime  @default(now())
-  serialNumber    Int
+  id                String        @id @default(cuid())
+  memberId          Int
+  taxYear           Int
+  issueDate         DateTime      @default(now())
+  serialNumber      Int
+  status            ReceiptStatus @default(issued)
+  replacesReceiptId String?
 
-  totalCents      Int // Total donated (cash gifts sum)
-  eligibleCents   Int // Eligible amount for tax purposess (can equal totalCents for pure cashs gifts)
-  advantageCents  Int @default(0) // For split receipting later
+  totalCents     Int // Total donated (cash gifts sum)
+  eligibleCents  Int // Eligible amount for tax purposess (can equal totalCents for pure cashs gifts)
+  advantageCents Int @default(0) // For split receipting later
 
-  donorName       String  @db.VarChar(80)
-  donorAddress    String? @db.VarChar(120)
-  donorCity       String? @db.VarChar(40)
-  donorProvince   String? @db.VarChar(20)
-  donorPostal     String? @db.VarChar(7)
+  donorName     String  @db.VarChar(80)
+  donorAddress  String? @db.VarChar(120)
+  donorCity     String? @db.VarChar(40)
+  donorProvince String? @db.VarChar(20)
+  donorPostal   String? @db.VarChar(7)
 
-  charityName     String  @db.VarChar(120)
-  charityAddress  String  @db.VarChar(120)
-  charityCity     String  @db.VarChar(40)
-  charityProvince String  @db.VarChar(20)
-  charityPostal   String  @db.VarChar(7)
-  charityRegNo    String  @db.VarChar(20)
-  charityEmail    String? @db.VarChar(80)
-  charityPhone    String? @db.VarChar(20)
-  charityWebsite  String? @db.VarChar(120)
-  churchLogoUrl   String? @db.VarChar(255)
-  locationIssued  String  @db.VarChar(60)
-  authorizedSigner String @db.VarChar(80)
-  authorizedSignatureUrl String?  @db.VarChar(255)
-  pdfUrl          String?
-  Member          Member   @relation(fields: [memberId], references: [mbr_id])
+  charityName            String            @db.VarChar(120)
+  charityAddress         String            @db.VarChar(120)
+  charityCity            String            @db.VarChar(40)
+  charityProvince        String            @db.VarChar(20)
+  charityPostal          String            @db.VarChar(7)
+  charityRegNo           String            @db.VarChar(20)
+  charityEmail           String?           @db.VarChar(80)
+  charityPhone           String?           @db.VarChar(20)
+  charityWebsite         String?           @db.VarChar(120)
+  churchLogoUrl          String?           @db.VarChar(255)
+  locationIssued         String            @db.VarChar(60)
+  authorizedSigner       String            @db.VarChar(80)
+  authorizedSignatureUrl String?           @db.VarChar(255)
+  pdfUrl                 String?
+  Member                 Member            @relation(fields: [memberId], references: [mbr_id])
+  donations              ReceiptDonation[]
+  replacesReceipt        Receipt?          @relation("ReceiptReplacement", fields: [replacesReceiptId], references: [id])
+  replacementReceipts    Receipt[]         @relation("ReceiptReplacement")
 
   @@unique([taxYear, serialNumber])
   @@index([memberId, taxYear])
+  @@index([replacesReceiptId])
+}
+
+model ReceiptDonation {
+  receiptId    String
+  incomeId     Int
+  amountCents  Int
+  receivedDate DateTime
+
+  receipt Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  income  Income  @relation(fields: [incomeId], references: [inc_id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([receiptId, incomeId])
+  @@index([incomeId])
+  @@index([receivedDate])
 }
 
 model Category {
@@ -141,21 +167,22 @@ model Category {
 }
 
 model Income {
-  inc_id                               Int       @id @default(autoincrement())
+  inc_id                               Int               @id @default(autoincrement())
   inc_type                             Int?
   amount                               Int?
   member                               Int?
-  year                                 Int?      @db.SmallInt
-  month                                Int?      @db.SmallInt
-  day                                  Int?      @db.SmallInt
-  qt                                   Int?      @db.SmallInt
-  notes                                String?   @db.VarChar(255)
-  created_at                           DateTime? @default(now()) @db.Timestamp(6)
-  updated_at                           DateTime? @db.Timestamp(6)
+  year                                 Int?              @db.SmallInt
+  month                                Int?              @db.SmallInt
+  day                                  Int?              @db.SmallInt
+  qt                                   Int?              @db.SmallInt
+  notes                                String?           @db.VarChar(255)
+  created_at                           DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at                           DateTime?         @db.Timestamp(6)
   inc_method                           Int?
-  Category_Income_inc_methodToCategory Category? @relation("Income_inc_methodToCategory", fields: [inc_method], references: [ctg_id])
-  Category_Income_inc_typeToCategory   Category? @relation("Income_inc_typeToCategory", fields: [inc_type], references: [ctg_id])
-  Member                               Member?   @relation(fields: [member], references: [mbr_id], onDelete: NoAction, onUpdate: NoAction)
+  Category_Income_inc_methodToCategory Category?         @relation("Income_inc_methodToCategory", fields: [inc_method], references: [ctg_id])
+  Category_Income_inc_typeToCategory   Category?         @relation("Income_inc_typeToCategory", fields: [inc_type], references: [ctg_id])
+  Member                               Member?           @relation(fields: [member], references: [mbr_id], onDelete: NoAction, onUpdate: NoAction)
+  receiptDonations                     ReceiptDonation[]
 
   @@index([month])
   @@index([qt])
@@ -176,7 +203,7 @@ model Member {
   note        String?   @db.VarChar(255)
   Income      Income[]
 
-  receipts    Receipt[]
+  receipts Receipt[]
 }
 
 view IncomeList {

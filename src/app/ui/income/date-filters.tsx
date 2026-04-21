@@ -1,14 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select';
+
+import { useIncomeQueryParams } from '@/app/ui/income/use-income-query-param';
 
 type Props = {
   selectedYear: number;
@@ -17,24 +19,23 @@ type Props = {
   years: number[];
 };
 
-const MONTHS: Array<{ value: number; label: string }> = [
-  { value: 0, label: "All months" },
-  { value: 1, label: "January" },
-  { value: 2, label: "February" },
-  { value: 3, label: "March" },
-  { value: 4, label: "April" },
-  { value: 5, label: "May" },
-  { value: 6, label: "June" },
-  { value: 7, label: "July" },
-  { value: 8, label: "August" },
-  { value: 9, label: "September" },
-  { value: 10, label: "October" },
-  { value: 11, label: "November" },
-  { value: 12, label: "December" },
-];
+const MONTHS: Array<{ value:number; label: string }> = [
+  { value: 0, label: 'All months' },
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+]
 
 const daysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
-
 
 const DateFilters = ({
   selectedYear,
@@ -42,107 +43,126 @@ const DateFilters = ({
   selectedDay,
   years,
 }: Props) => {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const { updateQuery } = useIncomeQueryParams();
 
   const maxDay = React.useMemo(() => {
     if (!selectedMonth) return 31;
     return daysInMonth(selectedYear, selectedMonth);
   }, [selectedYear, selectedMonth]);
 
-  const push = (updater: (params: URLSearchParams) => void) => {
-    const params = new URLSearchParams(searchParams.toString());
-    updater(params);
-
-    params.delete('page');
-
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
-  };
-
   const onYearChange = (value: string) => {
-    const y = Number(value);
-    if (!Number.isFinite(y)) return;
+    const year = Number(value);
 
-    push((params) => {
-      params.set('year', String(y));
-      params.delete('month');
-      params.delete('day');
+    if (!Number.isFinite(year) || year === selectedYear) {
+      return;
+    }
+
+    updateQuery({
+      set: { year },
+      clear: ['month', 'day'],
+      resetPageToOne: true,
+      mode: 'replace',
     });
   };
 
   const onMonthChange = (value: string) => {
-    const m = Number(value);
-    if (!Number.isFinite(m) || m < 0 || m > 12) return;
+    const month = Number(value);
 
-    push((params) => {
-      params.set('year', String(selectedYear));
+    if (!Number.isFinite(month) || month < 0 || month > 12) {
+      return;
+    }
 
-      if (m === 0) {
-        params.delete('month');
-        params.delete('day');
-        return;
-      }
+    if (month === 0) {
+      updateQuery({
+        set: { year: selectedYear },
+        clear: ['month', 'day'],
+        resetPageToOne: true,
+        mode: 'replace',
+      });
+      return;
+    }
 
-      params.set('month', String(m));
+    const nextMaxDay = daysInMonth(selectedYear, month);
+    const keepDay = selectedDay > 0 && selectedDay <= nextMaxDay ? selectedDay : null;
 
-      const currentDay = Number(params.get('day') ?? '0');
-      const dim = daysInMonth(selectedYear, m);
-      if (currentDay > dim) params.delete('day');
+    updateQuery({
+      set: {
+        year: selectedYear,
+        month,
+        day: keepDay
+      },
+      clear: keepDay == null ? ['day'] : [],
+      mode: 'replace',
     });
   };
 
   const onDayChange = (value: string) => {
-    const d = Number(value);
-    if (!Number.isFinite(d) || d < 0 || d > 31) return;
+    const day = Number(value);
 
-    push((params) => {
-      const monthParam = Number(params.get('month') ?? '0');
-      if (!monthParam) {
-        params.delete('day');
-        return;
-      }
+    if (!Number.isFinite(day) || day < 0 || day > 31) {
+      return;
+    }
 
-      const dim = daysInMonth(selectedYear, monthParam);
+    if (!selectedMonth) {
+      updateQuery({
+        set: { year: selectedYear },
+        clear: ['day'],
+        resetPageToOne: true,
+        mode: 'replace',
+      });
 
-      if (d === 0) {
-        params.delete('day');
-        return;
-      }
+      return;
+    };
 
-      if (d > dim) {
-        params.delete('day');
-        return;
-      }
+    const nextMaxDay = daysInMonth(selectedYear, selectedMonth);
 
-      params.set('day', String(d));
+    if (day === 0 || day > nextMaxDay) {
+      updateQuery({
+        set: {
+          year: selectedYear,
+          month: selectedMonth,
+        },
+        clear: ['day'],
+        resetPageToOne: true,
+        mode: 'replace',
+      });
+      return;
+    }
+
+    updateQuery({
+      set: {
+        year: selectedYear,
+        month: selectedMonth,
+        day,
+      },
+      resetPageToOne: true,
+      mode: 'replace',
     });
   };
 
   return (
-    <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center'>
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       <Select value={String(selectedYear)} onValueChange={onYearChange}>
-        <SelectTrigger className='w-full sm:w-[130px]'>
-          <SelectValue placeholder='Year' />
+        <SelectTrigger className="w-full sm:w-[130px]">
+          <SelectValue placeholder="Year" />
         </SelectTrigger>
         <SelectContent>
-          {years.map((y) => (
-            <SelectItem key={y} value={String(y)}>
-              {y}
+          {years.map((year) => (
+            <SelectItem key={year} value={String(year)}>
+              {year}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
       <Select value={String(selectedMonth)} onValueChange={onMonthChange}>
-        <SelectTrigger className='w-full sm:w-[170px]'>
-          <SelectValue placeholder='Month' />
+        <SelectTrigger className="w-full sm:w-[170px]">
+          <SelectValue placeholder="Month" />
         </SelectTrigger>
         <SelectContent>
-          {MONTHS.map((m) => (
-            <SelectItem key={m.value} value={String(m.value)}>
-              {m.label}
+          {MONTHS.map((month) => (
+            <SelectItem key={month.value} value={String(month.value)}>
+              {month.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -153,20 +173,20 @@ const DateFilters = ({
         onValueChange={onDayChange}
         disabled={selectedMonth === 0}
       >
-        <SelectTrigger className='w-full sm:w-[150px]'>
-          <SelectValue placeholder='Day' />
+        <SelectTrigger className="w-full sm:w-[150px]">
+          <SelectValue placeholder="Day" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value='0'>All days</SelectItem>
-          {Array.from({ length: maxDay }, (_, i) => i + 1).map((d) => (
-            <SelectItem key={d} value={String(d)}>
-              {d}
+          <SelectItem value="0">All days</SelectItem>
+          {Array.from({ length: maxDay }, (_, index) => index + 1).map((day) => (
+            <SelectItem key={day} value={String(day)}>
+              {day}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
     </div>
   );
-}
+};
 
 export default DateFilters;

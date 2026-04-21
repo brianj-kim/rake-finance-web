@@ -2,126 +2,182 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { EditMemberDTO } from '../../lib/definitions';
-import { getMemberForEdit, updateMember } from '../../lib/member-actions';
+import { toast } from 'sonner';
+
+import {
+  UpdateMemberFormSchema,
+  type UpdateMemberFormValues,
+} from '@/app/lib/definitions';
+import { getMemberForEdit, updateMember } from '@/app/lib/member-actions';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 
-
-
-const FormSchema = z.object({
-  mbr_id: z.number(),
-  name_kFull: z.string().min(1, 'Required'),
-  name_eFirst: z.string().optional(),
-  name_eLast: z.string().optional(),
-  email: z.email().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  province: z.string().optional(),
-  postal: z.string().optional(),
-  note: z.string().optional()
-});
-
-type FormValues = z.infer<typeof FormSchema>;
-
 type Props = {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (open:boolean) => void;
   memberId: number | null;
 };
 
+type GetMemberForEditResult = 
+  | {
+      success: true;
+      member: {
+        mbr_id: number;
+        name_kFull: string;
+        name_eFirst: string | null;
+        name_eLast: string | null;
+        email: string | null;
+        address: string | null;
+        city: string | null;
+        province: string | null;
+        postal: string | null;
+        note: string | null;
+      };
+    }
+  | {
+      success: false;
+      message: string
+    };
+
+type UpdateMemberResult = 
+  | { success: true }
+  | {
+      success: false;
+      message: string;
+      fieldErrors?: Partial<Record<keyof UpdateMemberFormValues, string>>;
+    };     
+
+const emptyValues: UpdateMemberFormValues = {
+  mbr_id: 0,
+  name_kFull: '',
+  name_eFirst: '',
+  name_eLast: '',
+  email: '',
+  address: '',
+  city: '',
+  province: '',
+  postal: '',
+  note: '',
+};
+    
 const EditMemberDialog = ({ open, onOpenChange, memberId }: Props) => {
   const router = useRouter();
-
   const [loading, setLoading] = React.useState(false);
-  const [member, setMember] = React.useState<EditMemberDTO | null>(null);
+  const [loaded, setLoaded] = React.useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: {
-      mbr_id: 0,
-      name_kFull: '',
-      name_eFirst: '',
-      name_eLast: '',
-      email: '',
-      address: '',
-      city: '',
-      province: '',
-      postal: '',
-      note: ''
-    },
+  const form = useForm<UpdateMemberFormValues>({
+    resolver: zodResolver(UpdateMemberFormSchema),
+    defaultValues: emptyValues
   });
 
   React.useEffect(() => {
-    if (!open || !memberId) return;
+    if (!open || memberId == null) {
+      setLoaded(false);
+      form.reset(emptyValues);
+      return;
+    }
 
     let cancelled = false;
 
-    const load = async () => {
+    const loadMember = async () => {
       setLoading(true);
-      const res = await getMemberForEdit(memberId);
-      setLoading(false);
+      setLoaded(false);
+      form.clearErrors();
 
-      if (cancelled) return;
+      try {
+        const res = (await getMemberForEdit(memberId)) as GetMemberForEditResult;
 
-      if (!res.success) {
-        toast.error(res.message);
-        onOpenChange(false);
-        return;
+        if (cancelled) return;
+
+        if (!res.success) {
+          toast.error(res.message);
+          onOpenChange(false);
+          return;
+        }
+
+        form.reset({
+          mbr_id: res.member.mbr_id,
+          name_kFull: res.member.name_kFull,
+          name_eFirst: res.member.name_eFirst ?? '',
+          name_eLast: res.member.name_eLast ?? '',
+          email: res.member.email ?? '',
+          address: res.member.address ?? '',
+          city: res.member.city ?? '',
+          province: res.member.province ?? '',
+          postal: res.member.postal ?? '',
+          note: res.member.note ?? '',
+        });
+
+        setLoaded(true);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-
-      setMember(res.member);
-
-      form.reset({
-        mbr_id: res.member.mbr_id,
-        name_kFull: res.member.name_kFull,
-        name_eFirst: res.member.name_eFirst ?? '',
-        name_eLast: res.member.name_eLast ?? '',
-        email: res.member.email ?? '',
-        address: res.member.address ?? '',
-        city: res.member.city ?? '',
-        province: res.member.province ?? '',
-        postal: res.member.postal ?? '',
-        note: res.member.note ?? ''
-      });
     };
 
-    load();
+    loadMember();
 
     return () => {
       cancelled = true;
     };
   }, [open, memberId, form, onOpenChange]);
 
-  const onSubmit = async (values: FormValues) => {
-    const res = await updateMember(values);
+  const onSubmit = form.handleSubmit(async (values) => {
+    form.clearErrors();
 
-    if (!res.success) {
-      if (res.fieldErrors) {
-        for (const [field, message] of Object.entries(res.fieldErrors)) {
-          form.setError(field as keyof FormValues, { type: 'server', message });
+    try {
+      const res = (await updateMember(values)) as UpdateMemberResult;
+
+      if (!res.success) {
+        if (res.fieldErrors) {
+          for (const [field, message] of Object.entries(res.fieldErrors)) {
+            if (!message) continue;
+
+            form.setError(field as keyof UpdateMemberFormValues, {
+              type: 'server',
+              message,
+            });
+          }
         }
+
+        toast.error('res.message');
+        return;
       }
 
-      toast.error(res.message);
-      return;
-    }
+      toast.success('Member updated.');
+      onOpenChange(false);
+      router.refresh();
+    } catch (err) {
+      console.error('UpdateMember submit error:', err);
 
-    toast.success('Member updated.');
-    onOpenChange(false);
-    router.refresh();
-  };
+      form.setError('root', {
+        type: 'server',
+        message: 'Failed to update member',
+      });
+
+      toast.error('Failed to update member.')
+    }
+  });
+
+  const { isSubmitting, errors } = form.formState;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-[520px]'>
+      <DialogContent className='sm:max-w-130'>
         <DialogHeader>
           <DialogTitle>Edit Member</DialogTitle>
         </DialogHeader>
@@ -130,7 +186,13 @@ const EditMemberDialog = ({ open, onOpenChange, memberId }: Props) => {
           <div className='py-6 text-sm text-muted-foreground'>Loading...</div>
         ) : (
           <Form {...form} >
-            <form onSubmit={form.handleSubmit(onSubmit)} className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <form onSubmit={onSubmit} className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+              {errors.root?.message ? (
+                <div className='md:col-span-2 text-sm text-destructive'>
+                  {errors.root.message}
+                </div>
+              ) : null}
+
               <FormField 
                 control={form.control}
                 name='name_kFull'
@@ -138,134 +200,188 @@ const EditMemberDialog = ({ open, onOpenChange, memberId }: Props) => {
                   <FormItem className='md:col-span-2'>
                     <FormLabel>Name (Korean, not changeable)</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled className='bg-muted font-semibold' />
+                      <Input 
+                        {...field}
+                        value={field.value ?? ''}
+                        disabled
+                        className='bg-muted font-semibold'
+                      />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField 
+              <FormField
                 control={form.control}
-                name='name_eFirst'
+                name="name_eFirst"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name (Official)</FormLabel>
                     <FormControl>
-                      <Input placeholder='First Name' {...field} />
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="First Name"
+                        autoComplete="given-name"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField 
+              <FormField
                 control={form.control}
-                name='name_eLast'
+                name="name_eLast"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Last Name (Official)</FormLabel>
                     <FormControl>
-                      <Input placeholder='Last Name' {...field} />
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="Last Name"
+                        autoComplete="family-name"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField 
+              <FormField
                 control={form.control}
-                name='email'
+                name="email"
                 render={({ field }) => (
-                  <FormItem className='md:col-span-2'>
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder='name@example.com' {...field} />
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="name@example.com"
+                        autoComplete="email"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField 
+              <FormField
                 control={form.control}
-                name='address'
+                name="address"
                 render={({ field }) => (
-                  <FormItem className='md:col-span-2'>
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Address</FormLabel>
                     <FormControl>
-                      <Input placeholder='123 Example St' {...field} />
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="123 Example St"
+                        autoComplete="street-address"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField 
+              <FormField
                 control={form.control}
-                name='city'
+                name="city"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input placeholder='Regina' {...field} />
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="Regina"
+                        autoComplete="address-level2"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField 
+              <FormField
                 control={form.control}
-                name='province'
+                name="province"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Province</FormLabel>
                     <FormControl>
-                      <Input placeholder='Saskatchewan' {...field} />
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="Saskatchewan"
+                        autoComplete="address-level1"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField 
+              <FormField
                 control={form.control}
-                name='postal'
+                name="postal"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Postal</FormLabel>
                     <FormControl>
-                      <Input placeholder='S4P 3W3' {...field} />
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="S4P3W3"
+                        autoComplete="postal-code"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField 
+              <FormField
                 control={form.control}
-                name='note'
+                name="note"
                 render={({ field }) => (
-                  <FormItem className='md:col-span-2'>
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Memo</FormLabel>
                     <FormControl>
-                      <Textarea placeholder='Optional Memo for the member' {...field} />
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="Optional memo for the member"
+                        rows={4}
+                      />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
 
               <div className='md:col-span-2 flex justify-end gap-2 pt-2'>
-                <Button type='button' variant='ghost' onClick={() => onOpenChange(false)}>
+                <Button 
+                  type='button'
+                  variant='ghost'
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                >
                   Cancel
                 </Button>
-                <Button type='submit' disabled={!member}>
-                  Save
+                <Button type='submit' disabled={!loaded || isSubmitting}>
+                  {isSubmitting ? 'Saving...' : 'Save'}
                 </Button>
               </div>
+
             </form>
           </Form>
         )}
+
       </DialogContent>
     </Dialog>
   )

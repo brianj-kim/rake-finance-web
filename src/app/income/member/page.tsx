@@ -27,7 +27,7 @@ const MemberList = async (props: {
     canAccessFinance(),
   ]);
 
-  const currentYear = new Date().getFullYear();
+  // const currentYear = new Date().getFullYear();
 
   return (
     <main className="space-y-6">
@@ -45,7 +45,6 @@ const MemberList = async (props: {
       <div className="toolbar-panel flex flex-col gap-4">
         <div className="w-full md:flex-1">
           <SearchBox
-            selectedYear={currentYear}
             initialQuery={query}
             clearKeys={["query", "page"]}
             placeholder="Search member..."

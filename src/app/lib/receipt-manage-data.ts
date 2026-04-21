@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/app/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { Prisma, ReceiptStatus } from '@prisma/client';
 import { ReceiptListResult } from './definitions';
 import { RECEIPT_EXCLUDE_NAMES } from '@/app/lib/receipt-constants';
 import { canAccessFinance } from '@/app/lib/auth';
@@ -24,6 +24,7 @@ export const fetchReceipts = async (input: {
 
   const baseWhere: Prisma.ReceiptWhereInput = {
     taxYear,
+    status: { not: ReceiptStatus.cancelled },
     Member: { is: { name_kFull: { notIn: [...RECEIPT_EXCLUDE_NAMES] } } },
   };
 

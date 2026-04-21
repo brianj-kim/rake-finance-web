@@ -96,7 +96,7 @@ const Page = async () => {
       icon: BanknotesIcon,
     },
     {
-      title: "Members & Households",
+      title: "Members",
       description:
         "Member admin now. Later: households, dependents → adult members, yearly cell groups.",
       href: "/income/member",

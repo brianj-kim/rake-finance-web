@@ -1,46 +1,45 @@
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIncomeQueryParams } from './use-income-query-param';
 
-const YearSelect = (props: { 
+type Props = {
   selectedYear: number;
   years: number[];
-}) => {
-  const { selectedYear, years } = props;
+};
 
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+const YearSelect = ({ selectedYear, years }: Props) => {
+  const { updateQuery } = useIncomeQueryParams();
 
   const onChange = (value: string) => {
-    const y = Number(value);
-    const params = new URLSearchParams(searchParams.toString());
+    const year = Number(value);
 
-    if (Number(value) === selectedYear) return;
+    if (!Number.isFinite(year) || year === selectedYear) {
+      return;
+    }
 
-    params.set('year', String(y));
-    params.delete('month');
-    params.delete('day');
-    params.set('page', '1');
-
-    router.replace(`${pathname}?${params.toString()}`);
+    updateQuery({
+      set: { year },
+      clear: ['month', 'day'],
+      resetPageToOne: true,
+      mode: 'replace',
+    });
   };
 
   return (
     <Select value={String(selectedYear)} onValueChange={onChange}>
-      <SelectTrigger className='w-[140px]'>
+      <SelectTrigger className='w-[35]'>
         <SelectValue placeholder='Year' />
       </SelectTrigger>
       <SelectContent>
-        {years.map((y) => (
-          <SelectItem key={y} value={String(y)}>
-            {y}
+        {years.map((year) => (
+          <SelectItem key={year} value={String(year)}>
+            {year}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
-  )
-}
+  );
+};
 
 export default YearSelect;

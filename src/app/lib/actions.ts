@@ -2,7 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { Prisma } from '@prisma/client';
-import { BatchFormValues, BatchSchema, IncomeSchema, SaveBatchIncomeResult } from '@/app/lib/definitions';
+import { 
+  BatchFormValues, 
+  BatchSchema, 
+  EditIncomeFormSchema, 
+  type EditIncomeDTO,
+  type EditIncomeFormValues, 
+  SaveBatchIncomeResult 
+} from '@/app/lib/definitions';
 import { nameKey } from '@/lib/utils';
 import { prisma } from '@/app/lib/prisma';
 import { canAccessFinance } from '@/app/lib/auth';
@@ -126,82 +133,147 @@ export const saveBatchIncome = async (
   } 
 };
 
+type UpdateIncomeFieldErrors = Partial<Record<keyof EditIncomeFormValues, string>>;
 
-export const updateIncome = async (id: number, formData: FormData) => {
+type UpdateIncomeResult = 
+  | { success: true }
+  | { success: false; message: string; fieldErrors?: UpdateIncomeFieldErrors };
+
+type GetIncomeForEditResult =
+  | { success: true, income: EditIncomeDTO }
+  | { success: false; message: string } 
+
+export const getIncomeForEdit = async (incomeId: unknown): Promise<GetIncomeForEditResult> => {
   if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
-  // Convert FormData to object for Zod validation
-  const rawData = {
-    name: formData.get('name'),
-    amount: formData.get('amount'),
-    type: formData.get('type'),
-    method: formData.get('method'),
-    notes: formData.get('notes')
-  };
+  const parsedIncomeId = Number(incomeId);
 
-  const validatedFields = IncomeSchema.safeParse(rawData);
-
-  if (!validatedFields.success) {
-    return { errors: validatedFields.error.flatten().fieldErrors };
+  if (!Number.isInteger(parsedIncomeId) || parsedIncomeId <= 0) {
+    return { success: false, message: 'Invalid income id.'};
   }
 
-  // Extract Date Fields
-  const year = parseInt(formData.get('year') as string);
-  const month = parseInt(formData.get('month') as string);
-  const day = parseInt(formData.get('day') as string);
+  try {
+    const income = await prisma.income.findUnique({
+      where: { inc_id: parsedIncomeId },
+      include: {
+        Member: {
+          select: {
+            name_kFull: true,
+          },
+        },
+      },
+    });
 
-  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
-    return { success: false, message: 'Invalid date values' };
+    if (!income) {
+      return { success: false, message: 'Income entry not found.'};
+    }
+
+    return {
+      success: true,
+      income: {
+        inc_id: income.inc_id,
+        name: income.Member?.name_kFull ?? '',
+        amount: income.amount ?? 0,
+        inc_type: income.inc_type ?? 0,
+        inc_method: income.inc_method ?? 0,
+        notes: income.notes ?? '',
+        year: income.year ?? new Date().getFullYear(),
+        month: income.month ?? 1,
+        day: income.day ?? 1,
+      },
+    };
+  } catch (err) {
+    console.error('getIncomeForEdit error:', err);
+    return { success: false, message: 'Failed to load income.' };
   }
+};
+
+export const updateIncome = async (input: unknown) => {
+  if (!(await canAccessFinance())) {
+    return { success: false, message: 'Forbidden' }; 
+  }
+
+  const parsed = EditIncomeFormSchema.safeParse(input);
+
+  if (!parsed.success) {
+    const fieldErrors: UpdateIncomeFieldErrors = {};
+
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === 'string' && !(key in fieldErrors)) {
+        fieldErrors[key as keyof EditIncomeFormValues] = issue.message;
+      }
+    }
+    
+    return {
+      success: false,
+      message: 'Invalid form values.',
+      fieldErrors,
+    };
+  }
+
+  const {
+    inc_id,
+    name,
+    amount,
+    typeId,
+    methodId,
+    notes,
+    year,
+    month,
+    day,
+  } = parsed.data;
 
   const qt = Math.ceil(month / 3);
-
-  const { name, amount, type, method, notes } = validatedFields.data;
-
   const cleanedName = nameKey(name);
 
   try {
     await prisma.$transaction(async (tx) => {
       const member = 
-        (await tx.member.findUnique({
-          where: { name_kFull: cleanedName },
-          select: { mbr_id: true }
-        })) ??
-        (await tx.member.create({
-          data: { 
-            name_kFull: cleanedName,
-            note: name.trim(), 
-          },
-          select: { mbr_id: true }
-        }));
+      (await tx.member.findUnique({
+        where: { name_kFull: cleanedName },
+        select: { mbr_id: true },
+      })) ??
+      (await tx.member.create({
+        data: {
+          name_kFull: cleanedName,
+          note: name.trim() === cleanedName ? null : name.trim(),
+        },
+        select: { mbr_id: true },
+      }));
 
-        await tx.income.update({
-          where: { inc_id: id },
-          data: {
-            amount,
-            inc_type: parseInt(type, 10),
-            inc_method: parseInt(method, 10),
-            notes: notes ?? null,
-            year,
-            month,
-            day,
-            qt,
-            member: member.mbr_id
-          }
-        })
-    })
+      await tx.income.update({
+        where: { inc_id },
+        data: {
+          amount,
+          inc_type: typeId,
+          inc_method: methodId,
+          notes: notes?.trim() ? notes.trim() : null,
+          year,
+          month,
+          day,
+          qt,
+          member: member.mbr_id,
+        },
+      });
+    });
 
+    revalidatePath('/income');
     revalidatePath('/income/list');
-    return { success: true }
-  } catch (error) {
-    console.error('Update Error:', error);
-    return { success: false, message: 'Databases Error' };
+    revalidatePath(`/income/list/${inc_id}/edit`);
+    revalidatePath('/income/receipt');
+
+    return { success: true };
+  } catch (err) {
+    console.error('updateIncome error:', err);
+    return {
+      success: false,
+      message: 'Failed to update income.',
+    };
   }
-
-
-}
+};
 
 export const deleteIncome = async (incomeId: number) => {
   if (!(await canAccessFinance())) {

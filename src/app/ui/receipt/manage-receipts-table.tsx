@@ -7,6 +7,17 @@ import { Button } from '@/components/ui/button';
 import DeleteReceiptButton from './delete-receipt-button';
 import useReceiptBulkActions from '@/app/ui/receipt/bulk-select-delete';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+ 
 type Row = {
   id: string;
   issueDateISO: string;
@@ -26,9 +37,12 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
     selectedCount,
     allSelected,
     someSelected,
+    confirmOpen,
     toggleAll,
     toggleOne,
-    bulkDelete
+    requestBulkDelete,
+    closeBulkDelete,
+    confirmBulkDelete,
   } = useReceiptBulkActions(rows);
 
   return (
@@ -41,7 +55,7 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
                 Selected <span className='font-medium'>{selectedCount}</span>
               </>
             ) : (
-              <span className='text-muted-foreground'>Select receipts to bulk delete</span>
+              <span className='text-muted-foreground'>Select receipts to cancel</span>
             )
           ) : (
             <span className='text-muted-foreground'>Read-only receipt access</span>
@@ -52,10 +66,10 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
           <Button
             variant='destructive'
             size='sm'
-            onClick={bulkDelete}
+            onClick={requestBulkDelete}
             disabled={pending || selectedCount === 0}
           >
-            {pending ? 'Deleting...' : 'Bulk delete'}
+            {pending ? 'Cancelling...' : 'Bulk cancel'}
           </Button>
         ) : (
           <span className='text-sm text-muted-foreground'>Read-only</span>
@@ -124,6 +138,28 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
           </div>
         )
       })}
+
+      <AlertDialog open={confirmOpen} onOpenChange={(open) => !open && closeBulkDelete()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel selected receipts?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This marks {selectedCount} receipt(s) as cancelled, removes their PDF files, and keeps the donation audit rows.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              disabled={pending}
+              className='bg-destructive text-white hover:bg-destructive/90'
+            >
+              {pending ? 'Cancelling...' : 'Cancel receipts'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/app/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { Prisma, ReceiptStatus } from '@prisma/client';
 import path from 'path';
 import fs from 'fs/promises';
 import { revalidatePath } from 'next/cache';
@@ -20,8 +20,128 @@ const toISODate = (d: Date) => d.toISOString().slice(0, 10);
 const isUniqueViolation = (err: unknown) => 
   err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
 
+const isTransactionConflict = (err: unknown) =>
+  err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034';
+
 const isErrnoException = (err: unknown): err is NodeJS.ErrnoException => {
   return err instanceof Error && 'code' in err;
+};
+
+const isInt = (v: unknown): v is number => Number.isInteger(v);
+
+class ReceiptOverlapError extends Error {
+  readonly incomeIds: number[];
+
+  constructor(incomeIds: number[]) {
+    super(`Selected donations were already receipted: ${incomeIds.join(', ')}`);
+    this.name = 'ReceiptOverlapError';
+    this.incomeIds = incomeIds;
+  }
+}
+
+class UnauditedReceiptError extends Error {
+  readonly receiptLabel: string;
+
+  constructor(receiptLabel: string) {
+    super(`Existing receipt ${receiptLabel} has no donation audit rows.`);
+    this.name = 'UnauditedReceiptError';
+    this.receiptLabel = receiptLabel;
+  }
+}
+
+type IncomeDonationCandidate = {
+  inc_id: number;
+  month: number | null;
+  day: number | null;
+  amount: number | null;
+};
+
+type ReceiptDonationSnapshot = {
+  incomeId: number;
+  amountCents: number;
+  receivedDate: Date;
+  line: {
+    date: string;
+    amountCents: number;
+  };
+};
+
+const getReceivedDate = (taxYear: number, month: number | null, day: number | null) => {
+  if (!isInt(month) || !isInt(day)) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const date = new Date(Date.UTC(taxYear, month - 1, day));
+  if (
+    date.getUTCFullYear() !== taxYear ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+};
+
+const buildReceiptDonationSnapshots = (
+  taxYear: number,
+  donations: IncomeDonationCandidate[]
+): ReceiptDonationSnapshot[] =>
+  donations.flatMap((donation) => {
+    const amountCents = Number(donation.amount) || 0;
+    const receivedDate = getReceivedDate(taxYear, donation.month, donation.day);
+
+    if (!receivedDate || amountCents <= 0) {
+      return [];
+    }
+
+    return [
+      {
+        incomeId: donation.inc_id,
+        amountCents,
+        receivedDate,
+        line: {
+          date: toISODate(receivedDate),
+          amountCents,
+        },
+      },
+    ];
+  });
+
+const assertReceiptableDonations = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    memberId: number;
+    taxYear: number;
+    incomeIds: number[];
+  }
+) => {
+  const unauditedReceipt = await tx.receipt.findFirst({
+    where: {
+      memberId: input.memberId,
+      taxYear: input.taxYear,
+      status: { not: ReceiptStatus.cancelled },
+      donations: { none: {} },
+    },
+    select: { taxYear: true, serialNumber: true },
+  });
+
+  if (unauditedReceipt) {
+    throw new UnauditedReceiptError(
+      `${unauditedReceipt.taxYear}-${String(unauditedReceipt.serialNumber).padStart(5, '0')}`
+    );
+  }
+
+  const overlapping = await tx.receiptDonation.findMany({
+    where: {
+      incomeId: { in: input.incomeIds },
+      receipt: { status: { not: ReceiptStatus.cancelled } },
+    },
+    select: { incomeId: true },
+  });
+
+  if (overlapping.length > 0) {
+    throw new ReceiptOverlapError([...new Set(overlapping.map((row) => row.incomeId))]);
+  }
 };
 
 export const generateReceiptForSelected = async (input: {
@@ -76,12 +196,16 @@ export const generateReceiptForSelected = async (input: {
   });
 
   if (donations.length === 0) return { success: false, message: 'Selected donations not found.' };
+  if (donations.length !== incomeIds.length) {
+    return { success: false, message: 'Some selected donations are unavailable for this member and tax year.' };
+  }
 
-  const lines = donations.map((d) => ({
-    date: `${taxYear}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`,
-    amountCents: Number(d.amount) || 0,
-  }));
+  const receiptDonations = buildReceiptDonationSnapshots(taxYear, donations);
+  if (receiptDonations.length !== donations.length) {
+    return { success: false, message: 'Selected donations must have valid received dates and positive amounts.' };
+  }
 
+  const lines = receiptDonations.map((donation) => donation.line);
   const totalCents = lines.reduce((acc, r) => acc + r.amountCents, 0);
   if (totalCents <= 0) return { success: false, message: 'Selected donations total is 0' };
 
@@ -113,6 +237,12 @@ export const generateReceiptForSelected = async (input: {
   for (let attempt =1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const created = await prisma.$transaction(async (tx) => {
+        await assertReceiptableDonations(tx, {
+          memberId,
+          taxYear,
+          incomeIds: receiptDonations.map((donation) => donation.incomeId),
+        });
+
         const agg = await tx.receipt.aggregate({
           where: { taxYear },
           _max: { serialNumber: true },
@@ -165,6 +295,7 @@ export const generateReceiptForSelected = async (input: {
             taxYear,
             issueDate,
             serialNumber: nextSerial,
+            status: ReceiptStatus.issued,
             totalCents,
             eligibleCents: totalCents,
             advantageCents: 0,
@@ -190,6 +321,13 @@ export const generateReceiptForSelected = async (input: {
             authorizedSignatureUrl,
 
             pdfUrl: null,
+            donations: {
+              create: receiptDonations.map((donation) => ({
+                incomeId: donation.incomeId,
+                amountCents: donation.amountCents,
+                receivedDate: donation.receivedDate,
+              })),
+            },
           },
           select: { id: true },
         });
@@ -204,11 +342,23 @@ export const generateReceiptForSelected = async (input: {
         });
 
         return { receiptId: receipt.id, serialNumber: nextSerial, pdfUrl };
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
       return { success: true, ...created };
     } catch (err) {
-      if (isUniqueViolation(err) && attempt < MAX_RETRIES) continue;
+      if ((isUniqueViolation(err) || isTransactionConflict(err)) && attempt < MAX_RETRIES) continue;
+      if (err instanceof ReceiptOverlapError) {
+        return {
+          success: false,
+          message: `One or more selected donations are already tied to an active receipt (${err.incomeIds.join(', ')}).`,
+        };
+      }
+      if (err instanceof UnauditedReceiptError) {
+        return {
+          success: false,
+          message: `Receipt ${err.receiptLabel} exists without donation audit rows. Cancel it before issuing another receipt for this member and year.`,
+        };
+      }
       console.error('generateReceiptForSelected error:', err);
       return { success: false, message: 'Failed to generate receipt. Please try again.' };      
     } 
@@ -236,13 +386,20 @@ export const generateAnnualReceipt = async (input: {
   }
 
   const donations = await prisma.income.findMany({
-    where: { member: memberId, year: taxYear, amount: { gt: 0 } },
+    where: {
+      member: memberId,
+      year: taxYear,
+      amount: { gt: 0 },
+      receiptDonations: {
+        none: { receipt: { status: { not: ReceiptStatus.cancelled } } },
+      },
+    },
     select: { inc_id: true },
     orderBy: [{ month: 'asc' }, { day: 'asc' }, { inc_id: 'asc' }],
   });
 
   if (donations.length === 0) {
-    return { success: false, message: 'No donations found for that year.' };
+    return { success: false, message: 'No unreceipted donations found for that year.' };
   }
 
   return generateReceiptForSelected({
@@ -293,12 +450,18 @@ export const deleteReceiptAndFile = async (input: {
       } catch (err: unknown) {
         if (!isErrnoException(err) || err.code !== 'ENOENT') {
           console.error('unlink failed:', err);
-          return { success: false, message: 'Failed to delete PDF file.' };
+          return { success: false, message: 'Failed to remove PDF file.' };
         }
       }
     }
 
-    await prisma.receipt.delete({ where: { id: receiptId } });
+    await prisma.receipt.update({
+      where: { id: receiptId },
+      data: {
+        status: ReceiptStatus.cancelled,
+        pdfUrl: null,
+      },
+    });
 
     revalidatePath('/income/receipt/manage');
     revalidatePath(`/income/receipt/${receipt.memberId}/receipts`);
@@ -306,7 +469,7 @@ export const deleteReceiptAndFile = async (input: {
     return { success: true };
   } catch (err) {
     console.error('deleteReceiptAndFile error:', err);
-    return { success: false, message: 'Failed to delete receipt.' };
+    return { success: false, message: 'Failed to cancel receipt.' };
   }
 }
 
@@ -316,16 +479,6 @@ type ReceiptBulkGenFail = { success: false; message: string };
 export type ReceiptBulkGenerationResult<T extends object = object> =
   | ReceiptBulkGenOK<T>
   | ReceiptBulkGenFail;
-
-const isInt = (v: unknown): v is number => Number.isInteger(v);
-const buildLines = (taxYear: number, donations: Array<{ month: number | null; day: number | null; amount: number | null }>) => {
-  return donations
-    .filter((d) => isInt(d.month) && isInt(d.day) && isInt(d.amount) && (d.amount ?? 0) > 0)
-    .map((d) => ({
-      date: `${taxYear}-${String(d.month!).padStart(2, '0')}-${String(d.day!).padStart(2, '0')}`,
-      amountCents: d.amount as number,
-    }));
-};
 
 const generateOneMemberReceipt = async (input: {
   memberId: number;
@@ -369,12 +522,16 @@ const generateOneMemberReceipt = async (input: {
       member: memberId,
       year: taxYear,
       amount: { gt: 0 },
+      receiptDonations: {
+        none: { receipt: { status: { not: ReceiptStatus.cancelled } } },
+      },
     },
     select: { month: true, day: true, amount: true, inc_id: true },
     orderBy: [{ month: 'asc' }, { day: 'asc' }, { inc_id: 'asc' }],
   });
 
-  const lines = buildLines(taxYear, donations);
+  const receiptDonations = buildReceiptDonationSnapshots(taxYear, donations);
+  const lines = receiptDonations.map((donation) => donation.line);
   const totalCents = lines.reduce((acc, r) => acc + r.amountCents, 0);
   if (totalCents <= 0) return { success: false, message: `No valid donations: ${memberId}` };
 
@@ -408,6 +565,12 @@ const generateOneMemberReceipt = async (input: {
   for (let attempt =1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const created = await prisma.$transaction(async (tx) => {
+        await assertReceiptableDonations(tx, {
+          memberId,
+          taxYear,
+          incomeIds: receiptDonations.map((donation) => donation.incomeId),
+        });
+
         const agg = await tx.receipt.aggregate({
           where: { taxYear },
           _max: { serialNumber: true },
@@ -463,6 +626,7 @@ const generateOneMemberReceipt = async (input: {
             taxYear,
             issueDate,
             serialNumber: nextSerial,
+            status: ReceiptStatus.issued,
 
             totalCents,
             eligibleCents: totalCents,
@@ -489,16 +653,29 @@ const generateOneMemberReceipt = async (input: {
             authorizedSignatureUrl,
 
             pdfUrl,
+            donations: {
+              create: receiptDonations.map((donation) => ({
+                incomeId: donation.incomeId,
+                amountCents: donation.amountCents,
+                receivedDate: donation.receivedDate,
+              })),
+            },
           },
           select: { id: true },
         });
 
         return { receiptId: receipt.id, serialNumber: nextSerial, pdfUrl };
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
       return { success: true, ...created };
     } catch (err) {
-      if (isUniqueViolation(err) && attempt < MAX_RETRIES) continue;
+      if ((isUniqueViolation(err) || isTransactionConflict(err)) && attempt < MAX_RETRIES) continue;
+      if (err instanceof ReceiptOverlapError) {
+        return { success: false, message: `Donations already receipted for memberId=${memberId}` };
+      }
+      if (err instanceof UnauditedReceiptError) {
+        return { success: false, message: `Unaudited active receipt exists for memberId=${memberId}` };
+      }
       console.error('generateOneMemberReceipt error:', err);
       return { success: false, message: `Failed to generate for memberId=${memberId}` };      
     }
@@ -539,7 +716,14 @@ export const generateReceiptsForYearBatch = async (input: {
 
   const eligible = await prisma.income.groupBy({
     by: ['member'],
-    where: { year: taxYear, amount: { gt: 0 }, member: { not: null } },
+    where: {
+      year: taxYear,
+      amount: { gt: 0 },
+      member: { not: null },
+      receiptDonations: {
+        none: { receipt: { status: { not: ReceiptStatus.cancelled } } },
+      },
+    },
     orderBy: { member: 'asc' },
     skip: cursor,
     take: batchSize,
@@ -563,7 +747,11 @@ export const generateReceiptsForYearBatch = async (input: {
   }
 
   const existing = await prisma.receipt.findMany({
-    where: { taxYear, memberId: { in: memberIds } },
+    where: {
+      taxYear,
+      memberId: { in: memberIds },
+      status: { not: ReceiptStatus.cancelled },
+    },
     select: { memberId: true },
   });
 
@@ -640,7 +828,7 @@ export const deleteReceiptsAndFiles = async (input: {
   try {
     const receipts = await prisma.receipt.findMany({
       where: { id: { in: receiptIds } },
-      select: { id: true, pdfUrl: true },
+      select: { id: true, pdfUrl: true, memberId: true },
     });
 
 
@@ -653,20 +841,27 @@ export const deleteReceiptsAndFiles = async (input: {
       } catch (err: unknown) {
         if (!isErrnoException(err) || err.code !== 'ENOENT') {
           console.error('unlink failed:', err);
-          return { success: false, message: 'Failed to delete one or more PDF files.' };
+          return { success: false, message: 'Failed to remove one or more PDF files.' };
         }
       }
     }
 
-    const result = await prisma.receipt.deleteMany({
+    const result = await prisma.receipt.updateMany({
       where: { id: { in: receiptIds } },
+      data: {
+        status: ReceiptStatus.cancelled,
+        pdfUrl: null,
+      },
     });
 
     revalidatePath('/income/receipt/manage');
+    for (const memberId of new Set(receipts.map((receipt) => receipt.memberId))) {
+      revalidatePath(`/income/receipt/${memberId}/receipts`);
+    }
 
     return { success: true, deleted: result.count };
   } catch (err) {
     console.error('deleteReceiptsAndFiles error:', err);
-    return { success: false, message: 'Failed to bulk delete receipts.' };
+    return { success: false, message: 'Failed to cancel selected receipts.' };
   }
 };

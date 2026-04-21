@@ -1,4 +1,42 @@
 import { z } from "zod";
+import { normalizePostal, normalizeSpaces } from "@/lib/utils";
+
+const optionalText = (max: number ) => 
+  z.string().trim().max(max).optional().nullable().or(z.literal(""));
+
+export const EditIncomeFormSchema = z.object({
+  inc_id: z.number().int().positive(),
+  name: z.string().trim().min(1, "Member is required"),
+  amount: z.number().int().positive("Amount must be larger than 0"),
+  typeId: z.number().int().positive("Select a type"),
+  methodId: z.number().int().positive("Select a method"),
+  notes: optionalText(255),
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+  day: z.number().int().min(1).max(31),
+});
+
+export type EditIncomeFormValues = z.infer<typeof EditIncomeFormSchema>;
+
+const MemberBaseSchema = z.object({
+  name_kFull: z.string().transform(normalizeSpaces).refine((v) => v.length > 0, "Korean name is required").refine((V) => V.length <= 50, "Max 50 characters."),
+  name_eFirst: optionalText(30),
+  name_eLast: optionalText(30),
+  email: z.union([z.literal(""), z.string().trim().email("Invalid email.")]).optional().nullable(),
+  address: optionalText(50),
+  city: optionalText(20),
+  province: optionalText(20),
+  postal: z.string().transform((v) => (v ? normalizePostal(v) : v)).refine((v) => !v || v.length <= 7, "Max 7 characters.").optional().nullable().or(z.literal("")),
+  note: optionalText(255),
+})
+
+export const CreateMemberFormSchema = MemberBaseSchema;
+export const UpdateMemberFormSchema = MemberBaseSchema.extend({
+  mbr_id: z.number().int().positive(),
+});
+
+export type CreateMemberFormValues = z.infer<typeof CreateMemberFormSchema>;
+export type UpdateMemberFormValues = z.infer<typeof UpdateMemberFormSchema>;
 
 export type IncomeDataItem = {
     type: number;

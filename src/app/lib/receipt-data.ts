@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/app/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { Prisma, ReceiptStatus } from '@prisma/client';
 
 import { formatEnglishName, truncate } from '@/app/lib/utils';
 import type { DonationRow, PagedResult, ReceiptMemberInfo, ReceiptMemberSummary } from '@/app/lib/definitions';
@@ -103,6 +103,7 @@ export const getReceiptMemberMenu = async (input: {
         where: {
           taxYear,
           memberId: { in: ids },
+          status: { not: ReceiptStatus.cancelled },
         },
         select: {
           memberId: true,
@@ -195,7 +196,14 @@ export async function getMemberDonationsForYear(input: {
   if (RECEIPT_EXCLUDE_SET.has(m.name_kFull)) return [];
 
   const rows = await prisma.income.findMany({
-    where: { member: memberId, year: taxYear, amount: { gt: 0 } },
+    where: {
+      member: memberId,
+      year: taxYear,
+      amount: { gt: 0 },
+      receiptDonations: {
+        none: { receipt: { status: { not: ReceiptStatus.cancelled } } },
+      },
+    },
     select: { 
       inc_id: true, 
       month: true, 
@@ -237,6 +245,7 @@ export const getReceiptStats = async (taxYear: number): Promise<ReceiptStats> =>
       by: ["memberId"],
       where: {
         taxYear,
+        status: { not: ReceiptStatus.cancelled },
         Member: { name_kFull: { notIn: [...RECEIPT_EXCLUDE_NAMES] } },
       },
     }),

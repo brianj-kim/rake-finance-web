@@ -34,7 +34,7 @@ const DeleteReceiptButton = (props: { receiptId: string}) => {
         return;
       }
 
-      toast.success('Receipt delete.');
+      toast.success('Receipt cancelled.');
       router.refresh();
     });
   };
@@ -43,22 +43,22 @@ const DeleteReceiptButton = (props: { receiptId: string}) => {
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button variant='destructive' size='sm' disabled={pending}>
-          Delete
+          Cancel
         </Button>
       </AlertDialogTrigger>
 
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this receipt?</AlertDialogTitle>
+          <AlertDialogTitle>Cancel this receipt?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will delete the database record and the PDF file. This action can&apos;t be undone.
+            This marks the receipt as cancelled, removes the PDF file, and keeps the donation audit rows.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={onDelete} disabled={pending}>
-            {pending ? 'Deleting...' : 'Delete'}
+            {pending ? 'Cancelling...' : 'Cancel receipt'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

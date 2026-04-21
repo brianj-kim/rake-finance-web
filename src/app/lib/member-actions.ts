@@ -1,33 +1,68 @@
-'use server'
+'use server';
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
-import { normalizeSpaces, normalizePostal } from '@/lib/utils';
-import { prisma } from './prisma';
-import { EditMemberDTO } from './definitions';
 
+import { normalizeSpaces } from '@/lib/utils';
+import { prisma } from '@/app/lib/prisma';
+import {
+  CreateMemberFormSchema,
+  type CreateMemberFormValues,
+  type EditMemberDTO,
+  UpdateMemberFormSchema,
+  type UpdateMemberFormValues,
+} from '@/app/lib/definitions';
 import { canAccessFinance } from '@/app/lib/auth';
-
 
 const MEMBER_LIST_PATH = '/income/member';
 
+type CreateMemberField = Extract<keyof CreateMemberFormValues, string>;
+type UpdateMemberField = Extract<keyof UpdateMemberFormValues, string>;
+
 type ActionOK<T extends object = object> = { success: true } & T;
-type ActionFail = { success: false; message: string; fieldErrors?: Record<string, string> };
-type ActionResult<T extends object = object> = ActionOK<T> | ActionFail;
+type ActionFail<TField extends string = string> = {
+  success: false;
+  message: string;
+  fieldErrors?: Partial<Record<TField, string>>;
+};
 
-const isP2002 = (e: unknown) => 
-  e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+type GetMemberForEditResult = ActionOK<{ member: EditMemberDTO }> | ActionFail;
+type UpdateMemberResult = ActionOK | ActionFail<UpdateMemberField>;
+type CreateMemberResult = ActionOK<{ memberId: number }> | ActionFail<CreateMemberField>;
 
-const MemberIdSchema = z.coerce.number().int().positive();
+const isP2002 = (err: unknown) =>
+  err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
 
-export const getMemberForEdit = async (mbrId: unknown): Promise<ActionResult<{ member: EditMemberDTO }>> => {
+const MemberIdSchema = z.number().int().positive();
+
+const toNullableText = (value: string | null | undefined) =>
+  value?.trim() ? value.trim() : null;
+
+const buildFieldErrors = <TField extends string>(
+  issues: z.core.$ZodIssue[]
+): Partial<Record<TField, string>> => {
+  const fieldErrors: Partial<Record<TField, string>> = {};
+
+  for (const issue of issues) {
+    const key = issue.path[0];
+    if (typeof key === 'string' && !(key in fieldErrors)) {
+      fieldErrors[key as TField] = issue.message;
+    }
+  }
+
+  return fieldErrors;
+}
+
+export const getMemberForEdit = async (mbrId: unknown): Promise<GetMemberForEditResult> => {
   if (!(await canAccessFinance())) {
-    return { success: false, message: 'Forbidden' };
+    return { success: false, message: 'Forbidden'};
   }
 
   const parsedId = MemberIdSchema.safeParse(mbrId);
-  if (!parsedId.success) return { success: false, message: 'Invalid member id.' };
+  if (!parsedId.success) {
+    return { success: false, message: 'Invalid member id.' };
+  }
 
   const row = await prisma.member.findUnique({
     where: { mbr_id: parsedId.data },
@@ -41,11 +76,13 @@ export const getMemberForEdit = async (mbrId: unknown): Promise<ActionResult<{ m
       city: true,
       province: true,
       postal: true,
-      note: true
-    }
+      note: true,
+    },
   });
 
-  if (!row) return { success: false, message: 'Member not found.' };
+  if (!row) {
+    return { success: false, message: 'Member not found.' }
+  }
 
   return {
     success: true,
@@ -59,85 +96,60 @@ export const getMemberForEdit = async (mbrId: unknown): Promise<ActionResult<{ m
       city: row.city,
       province: row.province,
       postal: row.postal,
-      note: row.note
-    }
-  }
-}
+      note: row.note,
+    },
+  };
+};
 
-const UpdateMemberSchema = z.object({
-  mbr_id: z.coerce.number().int().positive(),
-
-  name_kFull: z
-    .string()
-    .transform(normalizeSpaces)
-    .refine((v) => v.length > 0, "name_kFull is required.")
-    .refine((v) => v.length <= 50, "Max 50 characters."),
-
-  name_eFirst: z.string().trim().max(30).optional().nullable().or(z.literal('')),
-  name_eLast: z.string().trim().max(30).optional().nullable().or(z.literal('')),
-  email: z.email('Invalid email.').optional().nullable().or(z.literal('')),
-  address: z.string().trim().max(50).optional().nullable().or(z.literal('')),
-  city: z.string().trim().max(20).optional().nullable().or(z.literal('')),
-  province: z.string().trim().max(20).optional().nullable().or(z.literal('')),
-  postal: z
-      .string()
-      .transform((v) => (v ? normalizePostal(v) : v))
-      .refine((v) => !v || v.length <= 7, 'Max 7 characters.')
-      .optional()
-      .nullable()
-      .or(z.literal('')),
-  note: z.string().trim().max(255).optional().nullable().or(z.literal(''))
-});
-
-export const updateMember = async (input: unknown): Promise<ActionResult> => {
+export const updateMember = async (input: unknown): Promise<UpdateMemberResult> => {
   if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
-  const parsed = UpdateMemberSchema.safeParse(input);
+  const parsed = UpdateMemberFormSchema.safeParse(input);
+
   if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {};
-    for (const issue of parsed.error.issues) {
-      const key = String(issue.path[0] ?? 'form');
-      fieldErrors[key] = issue.message;
-    }
-    return { success: false, message: 'Invalid form values.', fieldErrors };
+    return {
+      success: false,
+      message: 'Invalid form values.',
+      fieldErrors: buildFieldErrors<UpdateMemberField>(parsed.error.issues),
+    };
   }
 
   const d = parsed.data;
 
-  const data = {
-    name_eFirst: d.name_eFirst?.trim() ? d.name_eFirst.trim() : null,
-    name_eLast: d.name_eLast?.trim() ? d.name_eLast.trim() : null,
-    email: d.email?.trim() ? d.email.trim() : null,
-    address: d.address?.trim() ? d.address.trim() : null,
-    city: d.city?.trim() ? d.city.trim() : null,
-    province: d.province?.trim() ? d.province.trim() : null,
-    postal: d.postal?.trim() ? d.postal.trim() : null,
-    note: d.note?.trim() ? d.note.trim() : null
-  };
-
   try {
     const existing = await prisma.member.findUnique({
       where: { mbr_id: d.mbr_id },
-      select: { name_kFull: true }
+      select: { name_kFull: true },
     });
 
     if (!existing) {
-      return { success: false, message: 'Member not found.'};
+      return { success: false, message: 'Member not found.' };
     }
 
     if (normalizeSpaces(existing.name_kFull) !== normalizeSpaces(d.name_kFull)) {
       return {
         success: false,
         message: 'name_kFull cannot be changed.',
-        fieldErrors: { name_kFull: 'name_kFull is not editable.' }
+        fieldErrors: {
+          name_kFull: 'name_kFull is not editable.',
+        },
       };
     }
 
     await prisma.member.update({
       where: { mbr_id: d.mbr_id },
-      data,
+      data: {
+        name_eFirst: toNullableText(d.name_eFirst),
+        name_eLast: toNullableText(d.name_eLast),
+        email: toNullableText(d.email),
+        address: toNullableText(d.address),
+        city: toNullableText(d.city),
+        province: toNullableText(d.province),
+        postal: toNullableText(d.postal),
+        note: toNullableText(d.note),
+      },
     });
 
     revalidatePath(MEMBER_LIST_PATH);
@@ -147,7 +159,9 @@ export const updateMember = async (input: unknown): Promise<ActionResult> => {
       return {
         success: false,
         message: 'name_kFull already exists.',
-        fieldErrors: { name_kFull: 'This name_kFull is already registered.'}
+        fieldErrors: {
+          name_kFull: 'This name_kFull is already registered.',
+        },
       };
     }
 
@@ -156,9 +170,9 @@ export const updateMember = async (input: unknown): Promise<ActionResult> => {
   }
 };
 
-export const deleteMember = async (mbrId: number): Promise<ActionResult> => {
+export const deleteMember = async (mbrId: number): Promise<ActionOK | ActionFail> => {
   if (!(await canAccessFinance())) {
-    return { success: false, message: 'Forbidden' };
+    return { success: false, message: 'Forbidden.' };
   }
 
   try {
@@ -167,69 +181,44 @@ export const deleteMember = async (mbrId: number): Promise<ActionResult> => {
     return { success: true };
   } catch (err) {
     console.error('deleteMember error:', err);
-    return { success: false, message: 'Failed to delete member. It may be referenced by income records.' };
+    return {
+      success: false,
+      message: 'Failed to delete member. It may be referenced by income records.',
+    };
   }
 };
 
-const CreateMemberSchema = z.object({
-  name_kFull: z
-        .string()
-        .transform(normalizeSpaces)
-        .refine((v) => v.length > 0, 'name_kFull is required.')
-        .refine((v) => v.length <= 50, 'Max 50 characters.'),
-
-  name_eFirst: z.string().trim().max(30).optional().nullable().or(z.literal('')),
-  name_eLast: z.string().trim().max(30).optional().nullable().or(z.literal('')),
-
-  email: z.string().trim().max(80).email('Invaild Email.').optional().nullable().or(z.literal('')),
-  address: z.string().trim().max(50).optional().nullable().or(z.literal('')),
-  city: z.string().trim().max(20).optional().nullable().or(z.literal('')),
-  province: z.string().trim().max(20).optional().nullable().or(z.literal('')),
-
-  postal: z
-    .string()
-    .transform((v) => (v ? normalizePostal(v) : v))
-    .refine((v) => !v || v.length <= 7, 'Max 7 characters.')
-    .optional()
-    .nullable()
-    .or(z.literal('')),
-
-  note: z
-    .string().trim().max(255).optional().nullable().or(z.literal(''))
-});
-
-export const createMember = async (input: unknown): Promise<ActionResult<{ memberId: number}>> => {
+export const createMember = async (input: unknown): Promise<CreateMemberResult> => {
   if (!(await canAccessFinance())) {
     return { success: false, message: 'Forbidden' };
   }
 
-  const parsed = CreateMemberSchema.safeParse(input);
+  const parsed = CreateMemberFormSchema.safeParse(input);
+
   if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {};
-    for (const issue of parsed.error.issues) {
-      const key = String(issue.path[0] ?? 'form');
-      fieldErrors[key] = issue.message;
-    }
-    return { success: false, message: 'Invalid form values.', fieldErrors };
+    return {
+      success: false,
+      message: 'Invalid form values.',
+      fieldErrors: buildFieldErrors<CreateMemberField>(parsed.error.issues),
+    };
   }
 
   const d = parsed.data;
 
-  const data = {
-    name_kFull: d.name_kFull,
-    name_eFirst: d.name_eFirst?.trim() ? d.name_eFirst.trim() : null,
-    name_eLast: d.name_eLast?.trim() ? d.name_eLast.trim() : null,
-    email: d.email?.trim() ? d.email.trim() : null,
-    address: d.address?.trim() ? d.address.trim() : null,
-    city: d.city?.trim() ? d.city.trim() : null,
-    province: d.province?.trim() ? d.province.trim() : null,
-    postal: d.postal?.trim() ? d.postal.trim() : null
-  };
-
   try {
     const created = await prisma.member.create({
-      data,
-      select: { mbr_id: true }
+      data: {
+        name_kFull: d.name_kFull,
+        name_eFirst: toNullableText(d.name_eFirst),
+        name_eLast: toNullableText(d.name_eLast),
+        email: toNullableText(d.email),
+        address: toNullableText(d.address),
+        city: toNullableText(d.city),
+        province: toNullableText(d.province),
+        postal: toNullableText(d.postal),
+        note: toNullableText(d.note),
+      },
+      select: { mbr_id: true },
     });
 
     revalidatePath(MEMBER_LIST_PATH);
@@ -239,11 +228,13 @@ export const createMember = async (input: unknown): Promise<ActionResult<{ membe
       return {
         success: false,
         message: 'Member already exists.',
-        fieldErrors: { name_kFull: 'This name_kFull already exists.' }
+        fieldErrors: {
+          name_kFull: 'This name_kFull already exists.',
+        },
       };
     }
 
     console.error('createMember error:', err);
-    return { success: false, message: 'Database failure. Pleases try again.'};
-  } 
+    return { success: false, message: 'Database failure. Please try again.' };
+  }
 };

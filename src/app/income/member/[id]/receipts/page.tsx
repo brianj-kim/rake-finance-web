@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ReceiptStatus } from '@prisma/client';
 import { prisma } from '@/app/lib/prisma';
 import { formatCurrency } from '@/app/lib/utils';
 
@@ -36,7 +37,7 @@ const MemberReceiptsPage = async (props: {
   }
 
   const receipts = await prisma.receipt.findMany({
-    where: { memberId },
+    where: { memberId, status: { not: ReceiptStatus.cancelled } },
     orderBy: [{ taxYear: 'desc' }, { serialNumber: 'desc' }],
     select: {
       id: true,
