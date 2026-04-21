@@ -172,7 +172,7 @@ export const updateMember = async (input: unknown): Promise<UpdateMemberResult> 
 
 export const deleteMember = async (mbrId: number): Promise<ActionOK | ActionFail> => {
   if (!(await canAccessFinance())) {
-    return { success: false, message: 'Forbidden.' };
+    return { success: false, message: 'Forbidden' };
   }
 
   try {
