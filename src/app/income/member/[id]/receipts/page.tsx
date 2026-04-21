@@ -8,6 +8,11 @@ import { canAccessFinance, requireFinanceAccess } from '@/app/lib/auth';
 import PageIntro from '@/app/ui/page-intro';
 import { buttonVariants } from '@/components/ui/button';
 
+const RECEIPT_VISIBLE_STATUSES: ReceiptStatus[] = [
+  ReceiptStatus.issued,
+  ReceiptStatus.replacement,
+];
+
 const MemberReceiptsPage = async (props: {
   params: Promise<{ id: string }>;
 }) => {
@@ -37,7 +42,7 @@ const MemberReceiptsPage = async (props: {
   }
 
   const receipts = await prisma.receipt.findMany({
-    where: { memberId, status: { not: ReceiptStatus.cancelled } },
+    where: { memberId, status: { in: RECEIPT_VISIBLE_STATUSES } },
     orderBy: [{ taxYear: 'desc' }, { serialNumber: 'desc' }],
     select: {
       id: true,

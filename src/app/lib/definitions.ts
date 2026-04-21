@@ -210,6 +210,7 @@ export type ReceiptListRow = {
   donorName: string;
   totalCents: number;
   pdfUrl: string | null;
+  status: string;
 };
 
 export type ReceiptListResult = {

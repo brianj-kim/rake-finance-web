@@ -17,6 +17,8 @@ enum ReceiptStatus {
   issued
   replacement
   cancelled
+  pending
+  failed
 }
 
 // Added for admin feature

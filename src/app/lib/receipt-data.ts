@@ -11,6 +11,17 @@ import { canAccessFinance } from '@/app/lib/auth';
 
 const RECEIPT_EXCLUDE_SET = new Set<string>(RECEIPT_EXCLUDE_NAMES);
 
+const RECEIPT_DONATION_BLOCKING_STATUSES: ReceiptStatus[] = [
+  ReceiptStatus.pending,
+  ReceiptStatus.issued,
+  ReceiptStatus.replacement,
+];
+
+const RECEIPT_VISIBLE_STATUSES: ReceiptStatus[] = [
+  ReceiptStatus.issued,
+  ReceiptStatus.replacement,
+];
+
 const baseWhere: Prisma.MemberWhereInput = {
   name_kFull: { notIn: [...RECEIPT_EXCLUDE_NAMES] },
 };
@@ -103,7 +114,7 @@ export const getReceiptMemberMenu = async (input: {
         where: {
           taxYear,
           memberId: { in: ids },
-          status: { not: ReceiptStatus.cancelled },
+          status: { in: RECEIPT_VISIBLE_STATUSES },
         },
         select: {
           memberId: true,
@@ -201,7 +212,7 @@ export async function getMemberDonationsForYear(input: {
       year: taxYear,
       amount: { gt: 0 },
       receiptDonations: {
-        none: { receipt: { status: { not: ReceiptStatus.cancelled } } },
+        none: { receipt: { status: { in: RECEIPT_DONATION_BLOCKING_STATUSES } } },
       },
     },
     select: { 
@@ -245,7 +256,7 @@ export const getReceiptStats = async (taxYear: number): Promise<ReceiptStats> =>
       by: ["memberId"],
       where: {
         taxYear,
-        status: { not: ReceiptStatus.cancelled },
+        status: { in: RECEIPT_VISIBLE_STATUSES },
         Member: { name_kFull: { notIn: [...RECEIPT_EXCLUDE_NAMES] } },
       },
     }),

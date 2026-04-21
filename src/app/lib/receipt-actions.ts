@@ -29,6 +29,15 @@ const isErrnoException = (err: unknown): err is NodeJS.ErrnoException => {
 
 const isInt = (v: unknown): v is number => Number.isInteger(v);
 
+const RECEIPT_TRANSACTION_RETRIES = 3;
+const RECEIPT_FINALIZE_RETRIES = 3;
+
+const RECEIPT_DONATION_BLOCKING_STATUSES: ReceiptStatus[] = [
+  ReceiptStatus.pending,
+  ReceiptStatus.issued,
+  ReceiptStatus.replacement,
+];
+
 class ReceiptOverlapError extends Error {
   readonly incomeIds: number[];
 
@@ -64,6 +73,115 @@ type ReceiptDonationSnapshot = {
     date: string;
     amountCents: number;
   };
+};
+
+type ReceiptFileTarget = {
+  dir: string;
+  filePath: string;
+  tempFilePath: string;
+  pdfUrl: string;
+};
+
+const buildReceiptFileTarget = (
+  taxYear: number,
+  serialNumber: number,
+  receiptId: string
+): ReceiptFileTarget => {
+  const dir = path.join(process.cwd(), 'public', 'receipts', String(taxYear));
+  const fileName = `receipt-${taxYear}-${String(serialNumber).padStart(5, '0')}.pdf`;
+
+  return {
+    dir,
+    filePath: path.join(dir, fileName),
+    tempFilePath: path.join(dir, `${fileName}.${receiptId}.tmp`),
+    pdfUrl: `/receipts/${taxYear}/${fileName}`,
+  };
+};
+
+const unlinkIfExists = async (filePath: string) => {
+  try {
+    await fs.unlink(filePath);
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+};
+
+const setReceiptIssuedWithPdf = async (receiptId: string, pdfUrl: string) => {
+  for (let attempt = 1; attempt <= RECEIPT_FINALIZE_RETRIES; attempt++) {
+    try {
+      const result = await prisma.receipt.updateMany({
+        where: { id: receiptId, status: ReceiptStatus.pending },
+        data: { status: ReceiptStatus.issued, pdfUrl },
+      });
+
+      if (result.count === 1) return;
+      throw new Error(`Receipt ${receiptId} is no longer pending.`);
+    } catch (err) {
+      if ((isTransactionConflict(err) || isUniqueViolation(err)) && attempt < RECEIPT_FINALIZE_RETRIES) {
+        continue;
+      }
+
+      throw err;
+    }
+  }
+};
+
+const markReceiptGenerationFailed = async (receiptId: string) => {
+  try {
+    await prisma.receipt.updateMany({
+      where: { id: receiptId, status: ReceiptStatus.pending },
+      data: { status: ReceiptStatus.failed, pdfUrl: null },
+    });
+  } catch (err) {
+    console.error('markReceiptGenerationFailed error:', err);
+  }
+};
+
+const writeReceiptPdfAndFinalize = async (input: {
+  receiptId: string;
+  taxYear: number;
+  serialNumber: number;
+  docProps: ReceiptDocumentProps;
+}) => {
+  const target = buildReceiptFileTarget(input.taxYear, input.serialNumber, input.receiptId);
+  let finalFileWritten = false;
+
+  try {
+    const doc = createElement(ReceiptDocument, input.docProps);
+    const pdfBuffer = await bufferFromReactPdf(doc);
+
+    await fs.mkdir(target.dir, { recursive: true });
+    await fs.writeFile(target.tempFilePath, pdfBuffer);
+    await fs.rename(target.tempFilePath, target.filePath);
+    finalFileWritten = true;
+
+    await setReceiptIssuedWithPdf(input.receiptId, target.pdfUrl);
+
+    return {
+      receiptId: input.receiptId,
+      serialNumber: input.serialNumber,
+      pdfUrl: target.pdfUrl,
+    };
+  } catch (err) {
+    try {
+      await unlinkIfExists(target.tempFilePath);
+    } catch (cleanupErr) {
+      console.error('temporary receipt PDF cleanup failed:', cleanupErr);
+    }
+
+    if (finalFileWritten) {
+      try {
+        await unlinkIfExists(target.filePath);
+      } catch (cleanupErr) {
+        console.error('receipt PDF cleanup failed:', cleanupErr);
+      }
+    }
+
+    await markReceiptGenerationFailed(input.receiptId);
+    throw err;
+  }
 };
 
 const getReceivedDate = (taxYear: number, month: number | null, day: number | null) => {
@@ -119,7 +237,7 @@ const assertReceiptableDonations = async (
     where: {
       memberId: input.memberId,
       taxYear: input.taxYear,
-      status: { not: ReceiptStatus.cancelled },
+      status: { in: RECEIPT_DONATION_BLOCKING_STATUSES },
       donations: { none: {} },
     },
     select: { taxYear: true, serialNumber: true },
@@ -134,7 +252,7 @@ const assertReceiptableDonations = async (
   const overlapping = await tx.receiptDonation.findMany({
     where: {
       incomeId: { in: input.incomeIds },
-      receipt: { status: { not: ReceiptStatus.cancelled } },
+      receipt: { status: { in: RECEIPT_DONATION_BLOCKING_STATUSES } },
     },
     select: { incomeId: true },
   });
@@ -232,11 +350,11 @@ export const generateReceiptForSelected = async (input: {
   const issueDate = new Date();
   const issueDateISO = toISODate(issueDate);
 
-  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= RECEIPT_TRANSACTION_RETRIES; attempt++) {
+    let reserved: { receiptId: string; serialNumber: number } | null = null;
 
-  for (let attempt =1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const created = await prisma.$transaction(async (tx) => {
+      reserved = await prisma.$transaction(async (tx) => {
         await assertReceiptableDonations(tx, {
           memberId,
           taxYear,
@@ -250,52 +368,13 @@ export const generateReceiptForSelected = async (input: {
 
         const nextSerial = (agg._max.serialNumber ?? 0) + 1;
 
-        const docProps: ReceiptDocumentProps = {
-          taxYear,
-          serialNumber: nextSerial,
-          issueDateISO,
-          charity: {
-            legalName: charityName,
-            registrationNo: charityRegNo,
-            address: charityAddress,
-            city: charityCity,
-            province: charityProvince,
-            postal: charityPostal,
-            locationIssued,
-            authorizedSigner,
-            charityEmail,
-            charityPhone,
-            charityWebsite,
-            churchLogoUrl,
-            authorizedSignatureUrl,
-          },
-          donor: {
-            name_official: donorName,
-            address: donorAddress,
-            city: donorCity,
-            province: donorProvince,
-            postal: donorPostal,
-          },
-          totalCents,
-          lines,
-        };
-
-        const doc = createElement(ReceiptDocument, docProps);
-        const pdfBuffer = await bufferFromReactPdf(doc);
-
-        const dir = path.join(process.cwd(), 'public', 'receipts', String(taxYear));
-        await fs.mkdir(dir, { recursive: true });
-
-        const fileName = `receipt-${taxYear}-${String(nextSerial).padStart(5, '0')}.pdf`;
-        const filePath = path.join(dir, fileName);
-
         const receipt = await tx.receipt.create({
           data: {
             memberId,
             taxYear,
             issueDate,
             serialNumber: nextSerial,
-            status: ReceiptStatus.issued,
+            status: ReceiptStatus.pending,
             totalCents,
             eligibleCents: totalCents,
             advantageCents: 0,
@@ -332,21 +411,55 @@ export const generateReceiptForSelected = async (input: {
           select: { id: true },
         });
 
-        await fs.writeFile(filePath, pdfBuffer);
-
-        const pdfUrl = `/receipts/${taxYear}/${fileName}`;
-
-        await tx.receipt.update({
-          where: { id: receipt.id },
-          data: { pdfUrl },
-        });
-
-        return { receiptId: receipt.id, serialNumber: nextSerial, pdfUrl };
+        return { receiptId: receipt.id, serialNumber: nextSerial };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+      const docProps: ReceiptDocumentProps = {
+        taxYear,
+        serialNumber: reserved.serialNumber,
+        issueDateISO,
+        charity: {
+          legalName: charityName,
+          registrationNo: charityRegNo,
+          address: charityAddress,
+          city: charityCity,
+          province: charityProvince,
+          postal: charityPostal,
+          locationIssued,
+          authorizedSigner,
+          charityEmail,
+          charityPhone,
+          charityWebsite,
+          churchLogoUrl,
+          authorizedSignatureUrl,
+        },
+        donor: {
+          name_official: donorName,
+          address: donorAddress,
+          city: donorCity,
+          province: donorProvince,
+          postal: donorPostal,
+        },
+        totalCents,
+        lines,
+      };
+
+      const created = await writeReceiptPdfAndFinalize({
+        receiptId: reserved.receiptId,
+        taxYear,
+        serialNumber: reserved.serialNumber,
+        docProps,
+      });
 
       return { success: true, ...created };
     } catch (err) {
-      if ((isUniqueViolation(err) || isTransactionConflict(err)) && attempt < MAX_RETRIES) continue;
+      if (
+        !reserved &&
+        (isUniqueViolation(err) || isTransactionConflict(err)) &&
+        attempt < RECEIPT_TRANSACTION_RETRIES
+      ) {
+        continue;
+      }
       if (err instanceof ReceiptOverlapError) {
         return {
           success: false,
@@ -391,7 +504,7 @@ export const generateAnnualReceipt = async (input: {
       year: taxYear,
       amount: { gt: 0 },
       receiptDonations: {
-        none: { receipt: { status: { not: ReceiptStatus.cancelled } } },
+        none: { receipt: { status: { in: RECEIPT_DONATION_BLOCKING_STATUSES } } },
       },
     },
     select: { inc_id: true },
@@ -523,7 +636,7 @@ const generateOneMemberReceipt = async (input: {
       year: taxYear,
       amount: { gt: 0 },
       receiptDonations: {
-        none: { receipt: { status: { not: ReceiptStatus.cancelled } } },
+        none: { receipt: { status: { in: RECEIPT_DONATION_BLOCKING_STATUSES } } },
       },
     },
     select: { month: true, day: true, amount: true, inc_id: true },
@@ -560,11 +673,11 @@ const generateOneMemberReceipt = async (input: {
   const issueDate = new Date();
   const issueDateISO = toISODate(issueDate);
 
-  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= RECEIPT_TRANSACTION_RETRIES; attempt++) {
+    let reserved: { receiptId: string; serialNumber: number } | null = null;
 
-  for (let attempt =1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const created = await prisma.$transaction(async (tx) => {
+      reserved = await prisma.$transaction(async (tx) => {
         await assertReceiptableDonations(tx, {
           memberId,
           taxYear,
@@ -578,55 +691,13 @@ const generateOneMemberReceipt = async (input: {
 
         const nextSerial = (agg._max.serialNumber ?? 0) + 1;
 
-        const docProps: ReceiptDocumentProps = {
-          taxYear,
-          serialNumber: nextSerial,
-          issueDateISO,
-          charity: {
-            legalName: charityName,
-            registrationNo: charityRegNo,
-            address: charityAddress,
-            city: charityCity,
-            province: charityProvince,
-            postal: charityPostal,
-            locationIssued,
-            authorizedSigner,
-            charityEmail,
-            charityPhone,
-            charityWebsite,
-            churchLogoUrl,
-            authorizedSignatureUrl,
-          },
-          donor: {
-            name_official: donorName,
-            address: donorAddress,
-            city: donorCity,
-            province: donorProvince,
-            postal: donorPostal
-          },
-          totalCents,
-          lines,
-        };
-
-        const doc = createElement(ReceiptDocument, docProps);
-        const pdfBuffer = await bufferFromReactPdf(doc);
-
-        const dir = path.join(process.cwd(), 'public', 'receipts', String(taxYear));
-        await fs.mkdir(dir, { recursive: true });
-
-        const fileName = `receipt-${taxYear}-${String(nextSerial).padStart(5, '0')}.pdf`;
-        const filePath = path.join(dir, fileName);
-        await fs.writeFile(filePath, pdfBuffer);
-
-        const pdfUrl = `/receipts/${taxYear}/${fileName}`;
-
         const receipt = await tx.receipt.create({
           data: {
             memberId,
             taxYear,
             issueDate,
             serialNumber: nextSerial,
-            status: ReceiptStatus.issued,
+            status: ReceiptStatus.pending,
 
             totalCents,
             eligibleCents: totalCents,
@@ -652,7 +723,7 @@ const generateOneMemberReceipt = async (input: {
             authorizedSigner,
             authorizedSignatureUrl,
 
-            pdfUrl,
+            pdfUrl: null,
             donations: {
               create: receiptDonations.map((donation) => ({
                 incomeId: donation.incomeId,
@@ -664,12 +735,55 @@ const generateOneMemberReceipt = async (input: {
           select: { id: true },
         });
 
-        return { receiptId: receipt.id, serialNumber: nextSerial, pdfUrl };
+        return { receiptId: receipt.id, serialNumber: nextSerial };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+      const docProps: ReceiptDocumentProps = {
+        taxYear,
+        serialNumber: reserved.serialNumber,
+        issueDateISO,
+        charity: {
+          legalName: charityName,
+          registrationNo: charityRegNo,
+          address: charityAddress,
+          city: charityCity,
+          province: charityProvince,
+          postal: charityPostal,
+          locationIssued,
+          authorizedSigner,
+          charityEmail,
+          charityPhone,
+          charityWebsite,
+          churchLogoUrl,
+          authorizedSignatureUrl,
+        },
+        donor: {
+          name_official: donorName,
+          address: donorAddress,
+          city: donorCity,
+          province: donorProvince,
+          postal: donorPostal,
+        },
+        totalCents,
+        lines,
+      };
+
+      const created = await writeReceiptPdfAndFinalize({
+        receiptId: reserved.receiptId,
+        taxYear,
+        serialNumber: reserved.serialNumber,
+        docProps,
+      });
 
       return { success: true, ...created };
     } catch (err) {
-      if ((isUniqueViolation(err) || isTransactionConflict(err)) && attempt < MAX_RETRIES) continue;
+      if (
+        !reserved &&
+        (isUniqueViolation(err) || isTransactionConflict(err)) &&
+        attempt < RECEIPT_TRANSACTION_RETRIES
+      ) {
+        continue;
+      }
       if (err instanceof ReceiptOverlapError) {
         return { success: false, message: `Donations already receipted for memberId=${memberId}` };
       }
@@ -721,7 +835,7 @@ export const generateReceiptsForYearBatch = async (input: {
       amount: { gt: 0 },
       member: { not: null },
       receiptDonations: {
-        none: { receipt: { status: { not: ReceiptStatus.cancelled } } },
+        none: { receipt: { status: { in: RECEIPT_DONATION_BLOCKING_STATUSES } } },
       },
     },
     orderBy: { member: 'asc' },
@@ -750,7 +864,7 @@ export const generateReceiptsForYearBatch = async (input: {
     where: {
       taxYear,
       memberId: { in: memberIds },
-      status: { not: ReceiptStatus.cancelled },
+      status: { in: RECEIPT_DONATION_BLOCKING_STATUSES },
     },
     select: { memberId: true },
   });

@@ -62,6 +62,7 @@ export const fetchReceipts = async (input: {
       donorName: true,
       totalCents: true,
       pdfUrl: true,
+      status: true,
     },
   });
 
@@ -75,6 +76,7 @@ export const fetchReceipts = async (input: {
       donorName: r.donorName,
       totalCents: r.totalCents,
       pdfUrl: r.pdfUrl,
+      status: r.status,
     })),
     pagination: { totalPages, totalItems },
   };

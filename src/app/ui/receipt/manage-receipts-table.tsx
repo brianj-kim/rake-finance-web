@@ -26,6 +26,15 @@ type Row = {
   donorName: string;
   totalCents: number;
   pdfUrl: string | null;
+  status: string;
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  issued: 'Issued',
+  replacement: 'Repl.',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
 };
 
 const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
@@ -87,7 +96,8 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
         </div>
         <div className='col-span-2'>Issued</div>
         <div className='col-span-2'>Serial</div>
-        <div className='col-span-3'>Donor</div>
+        <div className='col-span-2'>Donor</div>
+        <div className='col-span-1'>Status</div>
         <div className='col-span-2 text-right'>Amount</div>
         <div className='col-span-1 text-right'>PDF</div>
         <div className='col-span-1 text-right'>Del</div>
@@ -114,7 +124,10 @@ const ManageReceiptTable = (props: { rows: Row[]; allowDelete: boolean }) => {
             <div className='col-span-2'>
               {r.taxYear}-{String(r.serialNumber).padStart(5, '0')}
             </div>
-            <div className='col-span-3 truncate'>{r.donorName}</div>
+            <div className='col-span-2 truncate'>{r.donorName}</div>
+            <div className='col-span-1 truncate text-muted-foreground'>
+              {STATUS_LABELS[r.status] ?? r.status}
+            </div>
             <div className='col-span-2 text-right font-medium'>{formatCurrency(r.totalCents)}</div>
 
             <div className='col-span-1 text-right'>
